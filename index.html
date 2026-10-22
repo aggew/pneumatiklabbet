@@ -311,26 +311,40 @@ function cylDyn(c,dt){
   if(x<=0){x=0;if(vn<0)vn=0;}else if(x>=G.L){x=G.L;if(vn>0)vn=0;}
   st.x=x;st.v=vn;st.Fp=Fp;st.F=F;
 }
-/* svängvägg: två motriktade cylindrar kopplade till samma vägg */
-function hitWall(w){w.st.pulse=w.params.dur/1000;w.st.hits=(w.st.hits||0)+1;w.st.lastHit=simT;w.st.peak=0;w.st.s0=w.st.s;}
-function wallDyn(w,dt){const a=w._c1,b=w._c2,st=w.st,pr=w.params,L=Math.min(a._g.L,b._g.L),Lb=b._g.L;
+/* svängvägg: väggen svänger kring en led; cylindrarna fäster på olika hävarmar */
+function hitWall(w){w.st.pulse=w.params.dur/1000;w.st.hits=(w.st.hits||0)+1;w.st.lastHit=simT;w.st.peak=0;w.st.p0=w.st.phi;}
+const wSg=w=>w.params.layout==='opp'?-1:1;
+function wallMax(w){return Math.min(w._c1._g.L/(2*w.params.r1),w._c2._g.L/(2*w.params.r2));}
+function wallSet(w){const a=w._c1,b=w._c2,pr=w.params,sg=wSg(w),ph=w.st.phi,om=w.st.v||0;
+  a.st.x=clamp(a._g.L/2+pr.r1*ph,0,a._g.L);a.st.v=pr.r1*om;b.st.x=clamp(b._g.L/2+sg*pr.r2*ph,0,b._g.L);b.st.v=sg*pr.r2*om;}
+function wallDyn(w,dt){const a=w._c1,b=w._c2,st=w.st,pr=w.params,sg=wSg(w),M=wallMax(w);
   if(pr.auto==='on'){st.timer=(st.timer||0)+dt;if(st.timer>=pr.period){st.timer=0;hitWall(w);}}
-  let Fpl=0;if(st.pulse>0){Fpl=(pr.dir==='c2'?1:-1)*pr.plank;st.pulse-=dt;}
-  let s=clamp(st.s,0,L);const F=a.st.F-b.st.F+Fpl;
-  const m=pr.mass+a.params.mass+b.params.mass+0.5,Ff=pr.fric+a.params.fric+b.params.fric;let v=st.v||0,ac;
-  if(v===0)ac=Math.abs(F)<=Ff?0:(F-Math.sign(F)*Ff)/m;else ac=(F-Math.sign(v)*Ff-25*v)/m;
-  let vn=v+ac*dt;if(v!==0&&Math.sign(vn)!==Math.sign(v))vn=0;
-  s+=vn*dt;if(s<=0){s=0;if(vn<0)vn=0;}else if(s>=L){s=L;if(vn>0)vn=0;}
-  st.s=s;st.v=vn;st.F=F;a.st.x=s;a.st.v=vn;b.st.x=clamp(Lb-s,0,Lb);b.st.v=-vn;
-  if(st.s0!=null&&simT-st.lastHit<3)st.peak=Math.max(st.peak||0,Math.abs(s-st.s0));}
-function drawWall(x,c){const L=c._c1?Math.min(c._c1._g.L,c._c2._g.L):1,f=c._c1&&c.st.s!=null?clamp(c.st.s/L,0,1):0.5,dx=(f-0.5)*144,bx=dx*1.4;
-  x.strokeStyle=C.ink;x.lineWidth=2;ln(x,-26,-158,26,-158);x.lineWidth=1;for(let i=-24;i<26;i+=7)ln(x,i,-158,i+6,-166);x.lineWidth=2;
-  x.save();x.lineCap='round';x.strokeStyle=C.ink;x.lineWidth=12;ln(x,0,-150,bx,60);x.strokeStyle=C.grid2;x.lineWidth=7;ln(x,0,-150,bx,60);x.restore();
-  circ(x,0,-150,6,C.panel);circ(x,dx,0,4,C.ink);
+  let Tp=0;if(st.pulse>0){Tp=-pr.plank*pr.rp;st.pulse-=dt;}
+  const tq=a.st.F*pr.r1+sg*b.st.F*pr.r2+Tp;
+  const J=pr.mass*pr.rp*pr.rp/3+(a.params.mass+0.3)*pr.r1*pr.r1+(b.params.mass+0.3)*pr.r2*pr.r2;
+  const Tf=pr.fric*pr.rp+a.params.fric*pr.r1+b.params.fric*pr.r2,bv=25*(pr.r1*pr.r1+pr.r2*pr.r2);
+  let ph=clamp(st.phi,-M,M),om=st.v||0,al;
+  if(om===0)al=Math.abs(tq)<=Tf?0:(tq-Math.sign(tq)*Tf)/J;else al=(tq-Math.sign(om)*Tf-bv*om)/J;
+  let on=om+al*dt;if(om!==0&&Math.sign(on)!==Math.sign(om))on=0;
+  ph+=on*dt;if(ph<=-M){ph=-M;if(on<0)on=0;}else if(ph>=M){ph=M;if(on>0)on=0;}
+  st.phi=ph;st.v=on;st.T=tq;wallSet(w);
+  if(st.p0!=null&&simT-st.lastHit<3)st.peak=Math.max(st.peak||0,Math.abs(ph-st.p0));}
+function drawWall(x,c){
+  const toL=(wx,wy)=>rotP(wx-c.x,wy-c.y,(4-c.rot)&3),pr=c.params;
+  let dir=[0,1],scale=240,rd=[1,0];const a=c._c1,pins=[];
+  if(a){for(const k of[c._c1,c._c2]){const f=clamp(k.st.x/k._g.L,0,1);const[lx,ly]=rotP(92+144*f,0,k.rot);pins.push([k.x+lx,k.y+ly]);}
+    const dx=pins[0][0]-c.x,dy=pins[0][1]-c.y,d=Math.hypot(dx,dy)||1;dir=[dx/d,dy/d];scale=d/pr.r1;rd=rotP(1,0,a.rot);}
+  const Lp=pr.rp*scale,end=[c.x+dir[0]*(Lp+24),c.y+dir[1]*(Lp+24)],hp=[c.x+dir[0]*Lp,c.y+dir[1]*Lp];
+  const E=toL(end[0],end[1]);
+  x.strokeStyle=C.ink;x.lineWidth=2;ln(x,-26,-8,26,-8);x.lineWidth=1;for(let i=-24;i<26;i+=7)ln(x,i,-8,i+6,-16);x.lineWidth=2;
+  x.save();x.lineCap='round';x.strokeStyle=C.ink;x.lineWidth=12;ln(x,0,0,E[0],E[1]);x.strokeStyle=C.grid2;x.lineWidth=7;ln(x,0,0,E[0],E[1]);x.restore();
+  circ(x,0,0,6,C.panel);for(const p of pins){const P2=toL(p[0],p[1]);circ(x,P2[0],P2[1],4,C.ink);}
   const t=simT-(c.st.lastHit??-9);
-  if(t<0.45){const dirL=c.params.dir!=='c2',ox=dirL?bx+8+Math.max(0,0.25-t)*160:bx-78-Math.max(0,0.25-t)*160;x.fillStyle=C.warn;x.fillRect(ox,40,70,16);x.strokeRect(ox,40,70,16);
-    x.strokeStyle=C.muted;x.lineWidth=1.5;for(let i=0;i<3;i++){const yy=44+i*5,xx=dirL?ox+78:ox-8;ln(x,xx,yy,xx+(dirL?14:-14),yy);}x.lineWidth=2;x.strokeStyle=C.ink;}
-  x.beginPath();x.arc(44,-140,10,0,7);x.fillStyle=C.accent;x.fill();x.stroke();x.fillStyle=C.panel;x.fillRect(38,-142,12,4);}
+  if(t<0.45){const off=14+Math.max(0,0.25-t)*170,cx=hp[0]+rd[0]*(off+35),cy=hp[1]+rd[1]*(off+35),px=-rd[1],py=rd[0];
+    const q=[[35,8],[-35,8],[-35,-8],[35,-8]].map(([u,v])=>toL(cx+rd[0]*u+px*v,cy+rd[1]*u+py*v));
+    x.beginPath();q.forEach((P2,i)=>i?x.lineTo(P2[0],P2[1]):x.moveTo(P2[0],P2[1]));x.closePath();x.fillStyle=C.warn;x.fill();x.stroke();
+    x.strokeStyle=C.muted;x.lineWidth=1.5;for(let i=-1;i<=1;i++){const s0=toL(cx+rd[0]*45+px*i*5,cy+rd[1]*45+py*i*5),s1=toL(cx+rd[0]*60+px*i*5,cy+rd[1]*60+py*i*5);ln(x,s0[0],s0[1],s1[0],s1[1]);}x.lineWidth=2;x.strokeStyle=C.ink;}
+  x.beginPath();x.arc(34,0,10,0,7);x.fillStyle=C.accent;x.fill();x.stroke();x.fillStyle=C.panel;x.fillRect(28,-2,12,4);}
 function drawCyl(x,c){
   const dbl=c.type==='cylD',G=c._g||geo(c),f=G.L>0?clamp(c.st.x/G.L,0,1):0,px=-72+144*f;
   const hh=clamp(9+9*Math.sqrt(c.params.bore/32),11,28),rh=clamp(hh*Math.min(c.params.rod,c.params.bore-1)/c.params.bore,2,hh-4);
@@ -350,7 +364,7 @@ function cylInfo(c){const G=c._g,st=c.st,dbl=c.type==='cylD';const r=[['Läge',M
 
 /* automatik: regulatorn räknar fram trycket som bär lasten och finjusterar mot önskad höjd */
 function autoSet(c){const y=c._cyl,G=y._g,pr=y.params,st=c.st;if(!(G.L>0))return c.params.set;
-  const x=clamp(y.st.x,0,G.L);const W=(pr.grav==='yes'?pr.mass*9.81:0)+pr.fext+(y.type==='cylS'?pr.s0+(pr.s1-pr.s0)*x/G.L:0)+(y._wall?(y._wall._c1===y?y._wall._c2:y._wall._c1).st.F:0);
+  const x=clamp(y.st.x,0,G.L);const W=(pr.grav==='yes'?pr.mass*9.81:0)+pr.fext+(y.type==='cylS'?pr.s0+(pr.s1-pr.s0)*x/G.L:0)+(y._wall&&y._wall.params.layout==='opp'?(y._wall._c1===y?y._wall._c2.st.F*y._wall.params.r2/y._wall.params.r1:y._wall._c1.st.F*y._wall.params.r1/y._wall.params.r2):0);
   let e=(c.params.target/100*G.L-x)/G.L,v=y.st.v,ff;
   if(c._side==='D'){ff=W/1e5/G.Ar;}
   else if(c._side==='B'){ff=(pa(y.pn.A)*G.Ac-G.Ar-W/1e5)/G.An-1;e=-e;v=-v;}
@@ -521,17 +535,21 @@ zone:{name:'Säkerhetszon',short:'ZON',cat:'Skydd och mätning',box:[-46,-26,46,
     x.fillStyle=on?C.ink:C.ink;x.beginPath();x.arc(-18,-6,4,0,7);x.fill();x.lineWidth=3;ln(x,-18,-1,-18,8);ln(x,-24,2,-12,2);ln(x,-18,8,-22,15);ln(x,-18,8,-14,15);x.lineWidth=2;
     if(on){x.strokeStyle=C.muted;x.setLineDash([3,3]);ln(x,-2,-14,-2,14);x.setLineDash([]);}
     x.beginPath();x.arc(30,0,9,0,7);x.fillStyle=on?C.panel:C.danger;x.fill();x.strokeStyle=C.ink;x.stroke();}},
-wall:{name:'Svängvägg',short:'VÄGG',cat:'Cylindrar',box:[-30,-168,58,62],ports:[],
-  params:[sel('c1','Cylinder 1',c=>[['','Välj cylinder'],...comps.filter(isCyl).map(k=>[String(k.id),k.label])]),sel('c2','Cylinder 2 (motsatt sida)',c=>[['','Välj cylinder'],...comps.filter(isCyl).map(k=>[String(k.id),k.label])]),
-    rng('mass','Väggens massa',0,500,1,'kg'),rng('fric','Friktion i lagret',0,500,1,'N'),rng('arm','Hävarm till cylindrarna',0.1,2,0.05,'m'),
-    rng('plank','Plankans kraft',0,5000,10,'N'),rng('dur','Stöttid',20,1000,10,'ms'),sel('dir','Plankan trycker väggen',[['c1','Mot cylinder 1'],['c2','Mot cylinder 2']]),
+wall:{name:'Svängvägg',short:'VÄGG',cat:'Cylindrar',box:[-28,-20,46,20],ports:[],
+  params:[sel('layout','Cylindrarnas placering',[['same','Samma sida (hjälps åt)'],['opp','Var sin sida (mot varandra)']]),
+    sel('c1','Cylinder 1',c=>[['','Välj cylinder'],...comps.filter(isCyl).map(k=>[String(k.id),k.label])]),sel('c2','Cylinder 2',c=>[['','Välj cylinder'],...comps.filter(isCyl).map(k=>[String(k.id),k.label])]),
+    rng('r1','Hävarm cylinder 1',0.05,3,0.05,'m'),rng('r2','Hävarm cylinder 2',0.05,3,0.05,'m'),rng('rp','Hävarm där plankan träffar',0.05,4,0.05,'m'),
+    rng('mass','Väggens massa',0,500,1,'kg'),rng('fric','Friktion i lagret',0,500,1,'N'),
+    rng('plank','Plankans kraft',0,5000,10,'N'),rng('dur','Stöttid',20,1000,10,'ms'),
     sel('auto','Plankor automatiskt',[['off','Av'],['on','På']]),rng('period','Tid mellan plankor',0.5,10,0.1,'s')],
-  def:{c1:'',c2:'',mass:20,fric:10,arm:0.5,plank:300,dur:100,dir:'c1',auto:'off',period:2.5},
-  tap:c=>hitWall(c),acts:()=>[{side:'L',x:44,y:-140}],
+  def:{layout:'same',c1:'',c2:'',r1:0.5,r2:1,rp:1.2,mass:20,fric:5,plank:200,dur:100,auto:'off',period:2.5},
+  tap:c=>hitWall(c),acts:()=>[{side:'L',x:34,y:0}],
   tag:c=>c._c1?(c.st.hits?c.st.hits+' plankor':''):'välj cylindrar',
-  info:c=>{if(!c._c1)return[['Koppling','Välj två cylindrar som håller väggen']];const L=Math.min(c._c1._g.L,c._c2._g.L),st=c.st;
-    return[['Läge',Math.round(st.s*1000)+' mm · '+Math.round(100*st.s/L)+' %'],['Vinkel',f1(Math.atan2(st.s-L/2,c.params.arm)*180/Math.PI)+'°'],['Hastighet',f2(st.v||0)+' m/s'],
-      [c._c1.label+' trycker',Math.round(c._c1.st.F)+' N'],[c._c2.label+' trycker',Math.round(c._c2.st.F)+' N'],['Plankor',String(st.hits||0)],['Största utslag',st.hits?Math.round((st.peak||0)*1000)+' mm':'–']];},
+  info:c=>{if(!c._c1)return[['Koppling','Välj två cylindrar som håller väggen']];const st=c.st,pr=c.params,d=v=>f1(v*180/Math.PI)+'°';
+    return[['Vinkel',d(st.phi||0)+' (gräns ±'+d(wallMax(c))+')'],['Vid plankan',Math.round((st.phi||0)*pr.rp*1000)+' mm'],
+      [c._c1.label+' läge',Math.round(100*c._c1.st.x/c._c1._g.L)+' %'],[c._c2.label+' läge',Math.round(100*c._c2.st.x/c._c2._g.L)+' %'],
+      [c._c1.label+' trycker',Math.round(c._c1.st.F)+' N'],[c._c2.label+' trycker',Math.round(c._c2.st.F)+' N'],
+      ['Plankor',String(st.hits||0)],['Största utslag',st.hits?Math.round((st.peak||0)*pr.rp*1000)+' mm vid plankan':'–']];},
   draw:drawWall},
 gauge:{name:'Manometer',short:'M',cat:'Skydd och mätning',box:[-20,-20,20,26],ports:[P('P',0,26,0,1)],
   params:[rng('max','Skala',1,16,1,'bar')],def:{max:10},
@@ -547,7 +565,7 @@ const CATS=[['Försörjning',['source','regulator','tank']],['Ventiler',['v32','
 function rotP(x,y,r){switch(r&3){case 0:return[x,y];case 1:return[-y,x];case 2:return[-x,-y];default:return[y,-x];}}
 function portWorld(c,pid){const p=portDef(c.type,pid);const[a,b]=rotP(p.x,p.y,c.rot);const[dx,dy]=rotP(p.dx,p.dy,c.rot);return{x:c.x+a,y:c.y+b,dx,dy};}
 function toLocal(c,w){return rotP(w.x-c.x,w.y-c.y,(4-c.rot)&3);}
-function wb(c,mode){const t=T[c.type];let[x0,y0,x1,y1]=mode==='label'&&t.lbox?t.lbox:t.box;if(mode==='fit'&&isCyl(c))x1+=(c.params.grav==='yes'?160:110);
+function wb(c,mode){const t=T[c.type];let[x0,y0,x1,y1]=mode==='label'&&t.lbox?t.lbox:t.box;if(mode==='fit'&&isCyl(c))x1+=(c.params.grav==='yes'?160:110);if(mode==='fit'&&c.type==='wall'){y1+=(c.params.rp/c.params.r1)*120+40;x0-=60;x1+=60;}
   let a=1e9,b=1e9,d=-1e9,e=-1e9;for(const[p,q]of[[x0,y0],[x1,y0],[x0,y1],[x1,y1]]){const[u,v]=rotP(p,q,c.rot);a=Math.min(a,u);b=Math.min(b,v);d=Math.max(d,u);e=Math.max(e,v);}return[a+c.x,b+c.y,d+c.x,e+c.y];}
 function hoseGeom(h){const A=portWorld(byId(h.a.c),h.a.p),B=portWorld(byId(h.b.c),h.b.p);const d=Math.hypot(B.x-A.x,B.y-A.y),k=clamp(d*0.45,18,90);return[A.x,A.y,A.x+A.dx*k,A.y+A.dy*k,B.x+B.dx*k,B.y+B.dy*k,B.x,B.y];}
 function hoseLen(h){const A=portWorld(byId(h.a.c),h.a.p),B=portWorld(byId(h.b.c),h.b.p);return Math.hypot(B.x-A.x,B.y-A.y)*1.2/200;}
@@ -576,7 +594,7 @@ function build(){
   for(const c of comps)if(c.type==='regulator'){c._cyl=c.params.ctl==='auto'?comps.find(k=>String(k.id)===String(c.params.cyl)&&isCyl(k))||null:null;c._side=c._cyl&&c._cyl.type==='cylD'?(c._cyl.pn.A===c._cyl.pn.B?'D':c.pn.OUT===c._cyl.pn.B?'B':'A'):'A';}
   for(const c of comps)if(isCyl(c))c._wall=null;
   for(const c of comps)if(c.type==='wall'){const f=id=>comps.find(k=>String(k.id)===String(id)&&isCyl(k))||null;const a=f(c.params.c1),b=f(c.params.c2);
-    if(a&&b&&a!==b&&!a._wall&&!b._wall){c._c1=a;c._c2=b;a._wall=c;b._wall=c;const L=Math.min(a._g.L,b._g.L);if(c.st.s==null)c.st.s=L/2;c.st.s=clamp(c.st.s,0,L);a.st.x=c.st.s;b.st.x=clamp(b._g.L-c.st.s,0,b._g.L);}else{c._c1=c._c2=null;}}
+    if(a&&b&&a!==b&&!a._wall&&!b._wall){c._c1=a;c._c2=b;a._wall=c;b._wall=c;const M=wallMax(c);if(c.st.phi==null)c.st.phi=0;c.st.phi=clamp(c.st.phi,-M,M);wallSet(c);}else{c._c1=c._c2=null;}}
   for(const c of comps)c._zone=c.params.zone?comps.find(k=>String(k.id)===String(c.params.zone)&&k.type==='zone')||null:null;
   const N=nets.length;Vn=new Float64Array(N);Pn=new Float64Array(N);Dn=new Float64Array(N);
   for(let i=0;i<N;i++){const nt=nets[i];let s=0;for(const k of nt.keys)s+=(portPg.get(k)||0);const p=Math.max(0.02,(nt.keys.length?s/nt.keys.length:0)+1);Vn[i]=netVol(i);Pn[i]=p;nt.n=p*Vn[i];}
@@ -596,7 +614,7 @@ function step(dt){
 function autoValve(c){const cy=c._auto,G=cy._g,f=G.L>0?cy.st.x/G.L:0;
   if(f>=0.995&&c.st.last!=='out'){c.st.last='out';c.st.pos=1-c.st.pos;}
   else if(f<=0.005&&c.st.last!=='in'){c.st.last='in';c.st.pos=1-c.st.pos;}}
-function initSt(c){const st={q:0,qs:0,open:0,ex:{},exs:{}};if(isValve(c)){st.pos=1;st.anim=1;st.last='';}if(isCyl(c)){st.x=0;st.v=0;st.Fp=0;st.F=0;}if(T[c.type].toggle)st.on=true;if(c.type==='wall'){st.s=null;st.v=0;st.hits=0;st.pulse=0;st.timer=0;}c.st=st;}
+function initSt(c){const st={q:0,qs:0,open:0,ex:{},exs:{}};if(isValve(c)){st.pos=1;st.anim=1;st.last='';}if(isCyl(c)){st.x=0;st.v=0;st.Fp=0;st.F=0;}if(T[c.type].toggle)st.on=true;if(c.type==='wall'){st.phi=null;st.v=0;st.hits=0;st.pulse=0;st.timer=0;}c.st=st;}
 
 /* ---------- manövrering ---------- */
 function actPress(c,side){if(T[c.type].toggle||T[c.type].tap)return;if(c.params.mode==='hold'){c.st.pos=side==='R'?2:0;c.st.held=true;}}
@@ -657,15 +675,15 @@ const EX=[
   const kv=A('ball',260,40);const reg=A('regulator',260,150,{ctl:'auto',cyl:String(c1.id),target:50,set:2.5});const k=A('source',260,260,{p:6});
   const z=A('zone',-140,170);sv1.params.zone=sv2.params.zone=kv.params.zone=String(z.id);
   L(tk,'3',c1,'B');L(tk,'2',c1,'A');L(sv1,'P',c1,'B');L(sv2,'P',c1,'A');L(m1,'P',tk,'1');L(tk,'1',kv,'2');L(kv,'1',reg,'OUT');L(reg,'IN',k,'P');}},
- {name:'Svängvägg med två cylindrar',graph:true,desc:'En svängande vägg hålls av två cylindrar som trycker mot varandra. C2 har ett fast mottryck, C1 har en regulator på automatik som flyttar väggens centrum: ändra Önskat läge på REG1. Tryck på den orange knappen för att skicka en planka mot väggen. Kärlet T1 ger fjädring, S1 styr hur fort väggen hittar tillbaka och SV1 skyddar mot tryckspikar.',build(A,L){
-  const w=A('wall',0,0,{fric:5});const c1=A('cylD',-164,0,{bore:50,rod:20,stroke:200,mass:0,fric:8});const c2=A('cylD',164,0,{bore:50,rod:20,stroke:200,mass:0,fric:8},2);
+ {name:'Svängvägg med två cylindrar',graph:true,desc:'En svängande vägg hålls av två cylindrar på samma sida som hjälps åt: C1 sitter 0,5 m från leden och C2 1 m. Kolvsidorna delar luft med kärlet T1 och fjädrar, stångsidorna har fast mottryck från REG2. REG1 står på automatik och flyttar väggens centrum: ändra Önskat läge på REG1. Tryck på den orange knappen vid leden för att skicka en planka.',build(A,L){
+  const w=A('wall',0,-300);const c1=A('cylD',-164,-180,{bore:50,rod:20,stroke:200,mass:0,fric:8});const c2=A('cylD',-164,-60,{bore:50,rod:20,stroke:200,mass:0,fric:8});
   w.params.c1=String(c1.id);w.params.c2=String(c2.id);
-  const l1=A('silencer',-98,80),l2=A('silencer',98,-80,{},2);const t1=A('tank',-230,120,{vol:0.5});const s1=A('throttle',-230,230,{open:30,C:1});
-  const reg1=A('regulator',-230,330,{ctl:'auto',cyl:String(c1.id),target:50,set:3});const k1=A('source',-230,450,{p:6});
-  const sv=A('relief',-330,120,{set:6,C:2});const m1=A('gauge',-330,0);
-  const reg2=A('regulator',230,-130,{set:3},2);const k2=A('source',230,-260,{p:6},2);const m2=A('gauge',330,-60);
-  L(c1,'B',l1,'P');L(c1,'A',t1,'T');L(t1,'B',s1,'2');L(s1,'1',reg1,'OUT');L(reg1,'IN',k1,'P');L(sv,'P',t1,'B');L(m1,'P',c1,'A');
-  L(c2,'B',l2,'P');L(reg2,'OUT',c2,'A');L(k2,'P',reg2,'IN');L(m2,'P',c2,'A');}},
+  const ta=A('tee',-330,-86,{},1);const t1=A('tank',-430,-20,{vol:0.5});const s1=A('throttle',-430,110,{open:30,C:1});
+  const reg1=A('regulator',-430,220,{ctl:'auto',cyl:String(c2.id),target:50,set:3});const k1=A('source',-430,330,{p:6});
+  const sv=A('relief',-520,40,{set:6,C:2});const m1=A('gauge',-330,20);
+  const tb=A('tee',-60,40);const reg2=A('regulator',-60,140,{set:3});const k2=A('source',-60,260,{p:6});const m2=A('gauge',40,120);
+  L(ta,'2',c1,'A');L(ta,'3',c2,'A');L(ta,'1',t1,'T');L(t1,'B',s1,'2');L(s1,'1',reg1,'OUT');L(reg1,'IN',k1,'P');L(sv,'P',t1,'B');L(m1,'P',c2,'A');
+  L(tb,'2',c2,'B');L(tb,'3',c1,'B');L(tb,'1',reg2,'OUT');L(reg2,'IN',k2,'P');L(m2,'P',reg2,'OUT');}},
  {name:'Tvåhandsmanöver',desc:'Tvåtrycksventilen (OCH) släpper bara fram luft när båda 3/2-ventilerna hålls inne samtidigt. Använd två fingrar.',build(A,L){
   const c1=A('cylS',66,-260,{bore:32,rod:12,stroke:80,mass:1,s0:20,s1:50});const o1=A('andv',0,-150);const m1=A('gauge',110,-140);
   const v1=A('v32',-120,-10,{mode:'hold'}),v2=A('v32',120,-10,{mode:'hold'});const reg=A('regulator',0,110,{set:5});const k=A('source',0,240);const tk=A('tee',0,40);
