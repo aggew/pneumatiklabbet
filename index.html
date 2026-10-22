@@ -297,12 +297,11 @@ const posNames={v32:['Aktiverad · P→A','Vila · A→R'],v52:['Aktiverad · P�
 /* ---------- cylindrar ---------- */
 function geo(c){const D=c.params.bore/1000,d=Math.min(c.params.rod,c.params.bore-1)/1000;const Ac=Math.PI*D*D/4,Ar=Math.PI*d*d/4;return{Ac,Ar,An:Ac-Ar,L:c.params.stroke/1000};}
 function cylV(c,side){const G=c._g,x=clamp(c.st.x,0,G.L);return side?G.An*(G.L-x+0.005)*1000:G.Ac*(x+0.005)*1000;}
+function cylNet(c){const G=c._g,st=c.st,pr=c.params,dbl=c.type==='cylD';const pA=pa(c.pn.A),pB=dbl?pa(c.pn.B):1;const x=clamp(st.x,0,G.L);
+  const Fp=dbl?(pA*G.Ac-pB*G.An-G.Ar)*1e5:(pA-1)*G.Ac*1e5;st.Fp=Fp;st.F=Fp-pr.fext-(pr.grav==='yes'?pr.mass*9.81:0)-(dbl?0:pr.s0+(pr.s1-pr.s0)*(G.L>0?x/G.L:0));return st.F;}
 function cylDyn(c,dt){
-  const G=c._g,st=c.st,pr=c.params,dbl=c.type==='cylD';
-  const pA=pa(c.pn.A),pB=dbl?pa(c.pn.B):1;
-  let x=clamp(st.x,0,G.L);
-  const Fp=dbl?(pA*G.Ac-pB*G.An-G.Ar)*1e5:(pA-1)*G.Ac*1e5;
-  const F=Fp-pr.fext-(pr.grav==='yes'?pr.mass*9.81:0)-(dbl?0:pr.s0+(pr.s1-pr.s0)*(G.L>0?x/G.L:0));
+  const G=c._g,st=c.st,pr=c.params;let x=clamp(st.x,0,G.L);
+  const F=cylNet(c),Fp=st.Fp;
   const m=Math.max(0.2,pr.mass+0.25),Ff=pr.fric;let v=st.v,a;
   if(v===0)a=Math.abs(F)<=Ff?0:(F-Math.sign(F)*Ff)/m;
   else a=(F-Math.sign(v)*Ff-25*v)/m;
@@ -312,6 +311,26 @@ function cylDyn(c,dt){
   if(x<=0){x=0;if(vn<0)vn=0;}else if(x>=G.L){x=G.L;if(vn>0)vn=0;}
   st.x=x;st.v=vn;st.Fp=Fp;st.F=F;
 }
+/* svängvägg: två motriktade cylindrar kopplade till samma vägg */
+function hitWall(w){w.st.pulse=w.params.dur/1000;w.st.hits=(w.st.hits||0)+1;w.st.lastHit=simT;w.st.peak=0;w.st.s0=w.st.s;}
+function wallDyn(w,dt){const a=w._c1,b=w._c2,st=w.st,pr=w.params,L=Math.min(a._g.L,b._g.L),Lb=b._g.L;
+  if(pr.auto==='on'){st.timer=(st.timer||0)+dt;if(st.timer>=pr.period){st.timer=0;hitWall(w);}}
+  let Fpl=0;if(st.pulse>0){Fpl=(pr.dir==='c2'?1:-1)*pr.plank;st.pulse-=dt;}
+  let s=clamp(st.s,0,L);const F=a.st.F-b.st.F+Fpl;
+  const m=pr.mass+a.params.mass+b.params.mass+0.5,Ff=pr.fric+a.params.fric+b.params.fric;let v=st.v||0,ac;
+  if(v===0)ac=Math.abs(F)<=Ff?0:(F-Math.sign(F)*Ff)/m;else ac=(F-Math.sign(v)*Ff-25*v)/m;
+  let vn=v+ac*dt;if(v!==0&&Math.sign(vn)!==Math.sign(v))vn=0;
+  s+=vn*dt;if(s<=0){s=0;if(vn<0)vn=0;}else if(s>=L){s=L;if(vn>0)vn=0;}
+  st.s=s;st.v=vn;st.F=F;a.st.x=s;a.st.v=vn;b.st.x=clamp(Lb-s,0,Lb);b.st.v=-vn;
+  if(st.s0!=null&&simT-st.lastHit<3)st.peak=Math.max(st.peak||0,Math.abs(s-st.s0));}
+function drawWall(x,c){const L=c._c1?Math.min(c._c1._g.L,c._c2._g.L):1,f=c._c1&&c.st.s!=null?clamp(c.st.s/L,0,1):0.5,dx=(f-0.5)*144,bx=dx*1.4;
+  x.strokeStyle=C.ink;x.lineWidth=2;ln(x,-26,-158,26,-158);x.lineWidth=1;for(let i=-24;i<26;i+=7)ln(x,i,-158,i+6,-166);x.lineWidth=2;
+  x.save();x.lineCap='round';x.strokeStyle=C.ink;x.lineWidth=12;ln(x,0,-150,bx,60);x.strokeStyle=C.grid2;x.lineWidth=7;ln(x,0,-150,bx,60);x.restore();
+  circ(x,0,-150,6,C.panel);circ(x,dx,0,4,C.ink);
+  const t=simT-(c.st.lastHit??-9);
+  if(t<0.45){const dirL=c.params.dir!=='c2',ox=dirL?bx+8+Math.max(0,0.25-t)*160:bx-78-Math.max(0,0.25-t)*160;x.fillStyle=C.warn;x.fillRect(ox,40,70,16);x.strokeRect(ox,40,70,16);
+    x.strokeStyle=C.muted;x.lineWidth=1.5;for(let i=0;i<3;i++){const yy=44+i*5,xx=dirL?ox+78:ox-8;ln(x,xx,yy,xx+(dirL?14:-14),yy);}x.lineWidth=2;x.strokeStyle=C.ink;}
+  x.beginPath();x.arc(44,-140,10,0,7);x.fillStyle=C.accent;x.fill();x.stroke();x.fillStyle=C.panel;x.fillRect(38,-142,12,4);}
 function drawCyl(x,c){
   const dbl=c.type==='cylD',G=c._g||geo(c),f=G.L>0?clamp(c.st.x/G.L,0,1):0,px=-72+144*f;
   const hh=clamp(9+9*Math.sqrt(c.params.bore/32),11,28),rh=clamp(hh*Math.min(c.params.rod,c.params.bore-1)/c.params.bore,2,hh-4);
@@ -331,14 +350,14 @@ function cylInfo(c){const G=c._g,st=c.st,dbl=c.type==='cylD';const r=[['Läge',M
 
 /* automatik: regulatorn räknar fram trycket som bär lasten och finjusterar mot önskad höjd */
 function autoSet(c){const y=c._cyl,G=y._g,pr=y.params,st=c.st;if(!(G.L>0))return c.params.set;
-  const x=clamp(y.st.x,0,G.L);const W=(pr.grav==='yes'?pr.mass*9.81:0)+pr.fext+(y.type==='cylS'?pr.s0+(pr.s1-pr.s0)*x/G.L:0);
+  const x=clamp(y.st.x,0,G.L);const W=(pr.grav==='yes'?pr.mass*9.81:0)+pr.fext+(y.type==='cylS'?pr.s0+(pr.s1-pr.s0)*x/G.L:0)+(y._wall?(y._wall._c1===y?y._wall._c2:y._wall._c1).st.F:0);
   let e=(c.params.target/100*G.L-x)/G.L,v=y.st.v,ff;
   if(c._side==='D'){ff=W/1e5/G.Ar;}
   else if(c._side==='B'){ff=(pa(y.pn.A)*G.Ac-G.Ar-W/1e5)/G.An-1;e=-e;v=-v;}
   else{const pB=y.type==='cylD'?pa(y.pn.B):1;ff=y.type==='cylD'?(pB*G.An+G.Ar+W/1e5)/G.Ac-1:W/1e5/G.Ac;}
-  if(Math.abs(e)<0.15)st.I=clamp((st.I||0)+e*DT*AKI,-1,1);
+  if(Math.abs(e)<0.3)st.I=clamp((st.I||0)+e*DT*AKI,-1.5,1.5);
   return clamp(ff+AKP*e+(st.I||0)-AKD*v,0,10);}
-const AKP=3,AKI=1,AKD=6;
+const AKP=4,AKI=1,AKD=6;
 
 const zoneOn=c=>!!(c._zone&&!c._zone.st.on);
 const zoneSel=()=>sel('zone','Styrs av säkerhetszon',c=>[['','Ingen'],...comps.filter(k=>k.type==='zone').map(k=>[String(k.id),k.label])]);
@@ -354,7 +373,7 @@ source:{name:'Tryckkälla',short:'K',cat:'Försörjning',box:[-24,-30,24,24],por
 regulator:{name:'Tryckregulator',short:'REG',cat:'Försörjning',box:[-30,-30,36,30],ports:[P('IN',0,30,0,1),P('OUT',0,-30,0,-1)],
   params:[sel('ctl','Styrning',[['manual','Manuellt: håll inställt tryck'],['auto','Automatiskt: håll en cylinders höjd']]),
     sel('cyl','Cylinder att hålla',c=>[['','Välj cylinder'],...comps.filter(isCyl).map(k=>[String(k.id),k.label])]),
-    rng('target','Önskad höjd',0,100,1,'%'),rng('set','Inställt tryck',0,10,0.1,'bar'),rng('C','Flödeskapacitet',0.2,6,0.1,'NL/s/bar')],
+    rng('target','Önskat läge',0,100,1,'%'),rng('set','Inställt tryck',0,10,0.1,'bar'),rng('C','Flödeskapacitet',0.2,6,0.1,'NL/s/bar')],
   def:{ctl:'manual',cyl:'',target:50,set:5,C:3},
   tag:c=>c._cyl?'auto '+f1(c.st.set||0)+' bar':f1(c.params.set)+' bar',
   edges(c){const i=c.pn.IN,o=c.pn.OUT,pi=pa(i),po=pa(o);const sp=c._cyl?autoSet(c):c.params.set;c.st.set=sp;const e=sp-(po-1);
@@ -502,6 +521,18 @@ zone:{name:'Säkerhetszon',short:'ZON',cat:'Skydd och mätning',box:[-46,-26,46,
     x.fillStyle=on?C.ink:C.ink;x.beginPath();x.arc(-18,-6,4,0,7);x.fill();x.lineWidth=3;ln(x,-18,-1,-18,8);ln(x,-24,2,-12,2);ln(x,-18,8,-22,15);ln(x,-18,8,-14,15);x.lineWidth=2;
     if(on){x.strokeStyle=C.muted;x.setLineDash([3,3]);ln(x,-2,-14,-2,14);x.setLineDash([]);}
     x.beginPath();x.arc(30,0,9,0,7);x.fillStyle=on?C.panel:C.danger;x.fill();x.strokeStyle=C.ink;x.stroke();}},
+wall:{name:'Svängvägg',short:'VÄGG',cat:'Cylindrar',box:[-30,-168,58,62],ports:[],
+  params:[sel('c1','Cylinder 1',c=>[['','Välj cylinder'],...comps.filter(isCyl).map(k=>[String(k.id),k.label])]),sel('c2','Cylinder 2 (motsatt sida)',c=>[['','Välj cylinder'],...comps.filter(isCyl).map(k=>[String(k.id),k.label])]),
+    rng('mass','Väggens massa',0,500,1,'kg'),rng('fric','Friktion i lagret',0,500,1,'N'),rng('arm','Hävarm till cylindrarna',0.1,2,0.05,'m'),
+    rng('plank','Plankans kraft',0,5000,10,'N'),rng('dur','Stöttid',20,1000,10,'ms'),sel('dir','Plankan trycker väggen',[['c1','Mot cylinder 1'],['c2','Mot cylinder 2']]),
+    sel('auto','Plankor automatiskt',[['off','Av'],['on','På']]),rng('period','Tid mellan plankor',0.5,10,0.1,'s')],
+  def:{c1:'',c2:'',mass:20,fric:10,arm:0.5,plank:300,dur:100,dir:'c1',auto:'off',period:2.5},
+  tap:c=>hitWall(c),acts:()=>[{side:'L',x:44,y:-140}],
+  tag:c=>c._c1?(c.st.hits?c.st.hits+' plankor':''):'välj cylindrar',
+  info:c=>{if(!c._c1)return[['Koppling','Välj två cylindrar som håller väggen']];const L=Math.min(c._c1._g.L,c._c2._g.L),st=c.st;
+    return[['Läge',Math.round(st.s*1000)+' mm · '+Math.round(100*st.s/L)+' %'],['Vinkel',f1(Math.atan2(st.s-L/2,c.params.arm)*180/Math.PI)+'°'],['Hastighet',f2(st.v||0)+' m/s'],
+      [c._c1.label+' trycker',Math.round(c._c1.st.F)+' N'],[c._c2.label+' trycker',Math.round(c._c2.st.F)+' N'],['Plankor',String(st.hits||0)],['Största utslag',st.hits?Math.round((st.peak||0)*1000)+' mm':'–']];},
+  draw:drawWall},
 gauge:{name:'Manometer',short:'M',cat:'Skydd och mätning',box:[-20,-20,20,26],ports:[P('P',0,26,0,1)],
   params:[rng('max','Skala',1,16,1,'bar')],def:{max:10},
   tag:c=>f2(pg(c,'P'))+' bar',
@@ -510,7 +541,7 @@ gauge:{name:'Manometer',short:'M',cat:'Skydd och mätning',box:[-20,-20,20,26],p
     for(let i=0;i<=5;i++){const a=a0+(a1-a0)*i/5;ln(x,Math.cos(a)*12,Math.sin(a)*12,Math.cos(a)*15,Math.sin(a)*15);}
     const v=clamp(pg(c,'P')/c.params.max,0,1),a=a0+(a1-a0)*v;x.lineWidth=2;x.strokeStyle=C.accent;ln(x,0,0,Math.cos(a)*13,Math.sin(a)*13);x.fillStyle=C.ink;x.beginPath();x.arc(0,0,2.5,0,7);x.fill();x.strokeStyle=C.ink;}},
 };
-const CATS=[['Försörjning',['source','regulator','tank']],['Ventiler',['v32','v52','v53','shuttle','andv']],['Cylindrar',['cylD','cylS']],['Flödesstyrning',['throttle','check','flowctl','qexh','silencer']],['Skydd och mätning',['relief','gauge','zone']],['Slangkopplingar',['tee','cross','nipple','quick','ball','plug']]];
+const CATS=[['Försörjning',['source','regulator','tank']],['Ventiler',['v32','v52','v53','shuttle','andv']],['Cylindrar',['cylD','cylS','wall']],['Flödesstyrning',['throttle','check','flowctl','qexh','silencer']],['Skydd och mätning',['relief','gauge','zone']],['Slangkopplingar',['tee','cross','nipple','quick','ball','plug']]];
 
 /* ---------- geometri ---------- */
 function rotP(x,y,r){switch(r&3){case 0:return[x,y];case 1:return[-y,x];case 2:return[-x,-y];default:return[y,-x];}}
@@ -543,6 +574,9 @@ function build(){
     if(c.type==='cylD'){nets[c.pn.A].cyl.push([c,0]);nets[c.pn.B].cyl.push([c,1]);}
     if(c.type==='cylS')nets[c.pn.A].cyl.push([c,0]);}
   for(const c of comps)if(c.type==='regulator'){c._cyl=c.params.ctl==='auto'?comps.find(k=>String(k.id)===String(c.params.cyl)&&isCyl(k))||null:null;c._side=c._cyl&&c._cyl.type==='cylD'?(c._cyl.pn.A===c._cyl.pn.B?'D':c.pn.OUT===c._cyl.pn.B?'B':'A'):'A';}
+  for(const c of comps)if(isCyl(c))c._wall=null;
+  for(const c of comps)if(c.type==='wall'){const f=id=>comps.find(k=>String(k.id)===String(id)&&isCyl(k))||null;const a=f(c.params.c1),b=f(c.params.c2);
+    if(a&&b&&a!==b&&!a._wall&&!b._wall){c._c1=a;c._c2=b;a._wall=c;b._wall=c;const L=Math.min(a._g.L,b._g.L);if(c.st.s==null)c.st.s=L/2;c.st.s=clamp(c.st.s,0,L);a.st.x=c.st.s;b.st.x=clamp(b._g.L-c.st.s,0,b._g.L);}else{c._c1=c._c2=null;}}
   for(const c of comps)c._zone=c.params.zone?comps.find(k=>String(k.id)===String(c.params.zone)&&k.type==='zone')||null:null;
   const N=nets.length;Vn=new Float64Array(N);Pn=new Float64Array(N);Dn=new Float64Array(N);
   for(let i=0;i<N;i++){const nt=nets[i];let s=0;for(const k of nt.keys)s+=(portPg.get(k)||0);const p=Math.max(0.02,(nt.keys.length?s/nt.keys.length:0)+1);Vn[i]=netVol(i);Pn[i]=p;nt.n=p*Vn[i];}
@@ -555,18 +589,19 @@ function step(dt){
   for(let i=0;i<N;i++){Vn[i]=netVol(i);Pn[i]=nets[i].n/Vn[i];Dn[i]=0;}
   for(const c of comps){const t=T[c.type];if(t.edges)t.edges(c);}
   for(let i=0;i<N;i++){const nt=nets[i];nt.n=Math.max(1e-4*Vn[i],nt.n+Dn[i]);}
-  for(const c of comps){if(isCyl(c))cylDyn(c,dt);else if(c.type==='v52'&&c._auto)autoValve(c);}
+  for(const c of comps){if(isCyl(c)){if(c._wall)cylNet(c);else cylDyn(c,dt);}else if(c.type==='v52'&&c._auto)autoValve(c);}
+  for(const c of comps)if(c.type==='wall'&&c._c1)wallDyn(c,dt);
   simT+=dt;
 }
 function autoValve(c){const cy=c._auto,G=cy._g,f=G.L>0?cy.st.x/G.L:0;
   if(f>=0.995&&c.st.last!=='out'){c.st.last='out';c.st.pos=1-c.st.pos;}
   else if(f<=0.005&&c.st.last!=='in'){c.st.last='in';c.st.pos=1-c.st.pos;}}
-function initSt(c){const st={q:0,qs:0,open:0,ex:{},exs:{}};if(isValve(c)){st.pos=1;st.anim=1;st.last='';}if(isCyl(c)){st.x=0;st.v=0;st.Fp=0;st.F=0;}if(T[c.type].toggle)st.on=true;c.st=st;}
+function initSt(c){const st={q:0,qs:0,open:0,ex:{},exs:{}};if(isValve(c)){st.pos=1;st.anim=1;st.last='';}if(isCyl(c)){st.x=0;st.v=0;st.Fp=0;st.F=0;}if(T[c.type].toggle)st.on=true;if(c.type==='wall'){st.s=null;st.v=0;st.hits=0;st.pulse=0;st.timer=0;}c.st=st;}
 
 /* ---------- manövrering ---------- */
-function actPress(c,side){if(T[c.type].toggle)return;if(c.params.mode==='hold'){c.st.pos=side==='R'?2:0;c.st.held=true;}}
-function actRelease(c,side){if(T[c.type].toggle){c.st.on=!c.st.on;return;}if(c.params.mode==='hold'){c.st.pos=1;c.st.held=false;}else{const t=side==='R'?2:0;c.st.pos=c.st.pos===t?1:t;}}
-function actCancel(c){if(T[c.type].toggle)return;if(c.params.mode==='hold'){c.st.pos=1;c.st.held=false;}}
+function actPress(c,side){if(T[c.type].toggle||T[c.type].tap)return;if(c.params.mode==='hold'){c.st.pos=side==='R'?2:0;c.st.held=true;}}
+function actRelease(c,side){if(T[c.type].tap){T[c.type].tap(c);return;}if(T[c.type].toggle){c.st.on=!c.st.on;return;}if(c.params.mode==='hold'){c.st.pos=1;c.st.held=false;}else{const t=side==='R'?2:0;c.st.pos=c.st.pos===t?1:t;}}
+function actCancel(c){if(T[c.type].toggle||T[c.type].tap)return;if(c.params.mode==='hold'){c.st.pos=1;c.st.held=false;}}
 
 /* ---------- komponenter skapa / ta bort ---------- */
 function newComp(type,x,y,params={},rot=0){const t=T[type];let max=0;for(const c of comps)if(T[c.type].short===t.short){const n=parseInt(c.label.slice(t.short.length))||0;max=Math.max(max,n);}
@@ -622,6 +657,15 @@ const EX=[
   const kv=A('ball',260,40);const reg=A('regulator',260,150,{ctl:'auto',cyl:String(c1.id),target:50,set:2.5});const k=A('source',260,260,{p:6});
   const z=A('zone',-140,170);sv1.params.zone=sv2.params.zone=kv.params.zone=String(z.id);
   L(tk,'3',c1,'B');L(tk,'2',c1,'A');L(sv1,'P',c1,'B');L(sv2,'P',c1,'A');L(m1,'P',tk,'1');L(tk,'1',kv,'2');L(kv,'1',reg,'OUT');L(reg,'IN',k,'P');}},
+ {name:'Svängvägg med två cylindrar',graph:true,desc:'En svängande vägg hålls av två cylindrar som trycker mot varandra. C2 har ett fast mottryck, C1 har en regulator på automatik som flyttar väggens centrum: ändra Önskat läge på REG1. Tryck på den orange knappen för att skicka en planka mot väggen. Kärlet T1 ger fjädring, S1 styr hur fort väggen hittar tillbaka och SV1 skyddar mot tryckspikar.',build(A,L){
+  const w=A('wall',0,0,{fric:5});const c1=A('cylD',-164,0,{bore:50,rod:20,stroke:200,mass:0,fric:8});const c2=A('cylD',164,0,{bore:50,rod:20,stroke:200,mass:0,fric:8},2);
+  w.params.c1=String(c1.id);w.params.c2=String(c2.id);
+  const l1=A('silencer',-98,80),l2=A('silencer',98,-80,{},2);const t1=A('tank',-230,120,{vol:0.5});const s1=A('throttle',-230,230,{open:30,C:1});
+  const reg1=A('regulator',-230,330,{ctl:'auto',cyl:String(c1.id),target:50,set:3});const k1=A('source',-230,450,{p:6});
+  const sv=A('relief',-330,120,{set:6,C:2});const m1=A('gauge',-330,0);
+  const reg2=A('regulator',230,-130,{set:3},2);const k2=A('source',230,-260,{p:6},2);const m2=A('gauge',330,-60);
+  L(c1,'B',l1,'P');L(c1,'A',t1,'T');L(t1,'B',s1,'2');L(s1,'1',reg1,'OUT');L(reg1,'IN',k1,'P');L(sv,'P',t1,'B');L(m1,'P',c1,'A');
+  L(c2,'B',l2,'P');L(reg2,'OUT',c2,'A');L(k2,'P',reg2,'IN');L(m2,'P',c2,'A');}},
  {name:'Tvåhandsmanöver',desc:'Tvåtrycksventilen (OCH) släpper bara fram luft när båda 3/2-ventilerna hålls inne samtidigt. Använd två fingrar.',build(A,L){
   const c1=A('cylS',66,-260,{bore:32,rod:12,stroke:80,mass:1,s0:20,s1:50});const o1=A('andv',0,-150);const m1=A('gauge',110,-140);
   const v1=A('v32',-120,-10,{mode:'hold'}),v2=A('v32',120,-10,{mode:'hold'});const reg=A('regulator',0,110,{set:5});const k=A('source',0,240);const tk=A('tee',0,40);
@@ -826,6 +870,7 @@ function openComp(c){palette.hidden=true;examples.hidden=true;$('#addBtn').setAt
   const db=sheet.querySelector('#delBtn');let armT=0;db.onclick=()=>{if(db.classList.contains('arm')){clearTimeout(armT);delComp(c);}else{db.classList.add('arm');db.textContent='Tryck igen för att ta bort';armT=setTimeout(()=>{db.classList.remove('arm');db.textContent='Ta bort';},2500);}};
   renderActs(c);sheet.hidden=false;updateRO();keepVisible(c.x,c.y);}
 function renderActs(c){const box=sheet.querySelector('#actBox');if(!box)return;box.innerHTML='';const tt=T[c.type];
+  if(tt.tap){box.hidden=false;const b=document.createElement('button');b.className='btn';b.type='button';b.textContent='Skicka en planka';b.onclick=()=>tt.tap(c);box.appendChild(b);return;}
   if(isCyl(c)){box.hidden=false;const b=document.createElement('button');b.className='btn';b.type='button';b.textContent='Knuffa lasten';b.onclick=()=>{c.st.v-=Math.min(1,0.3+c.params.stroke/1000);};box.appendChild(b);return;}
   if(tt.toggle){box.hidden=false;const b=document.createElement('button');b.className='btn';b.type='button';b.dataset.tg='1';b.textContent=tt.toggleLabel(c);b.onclick=()=>{actRelease(c,'L');b.textContent=tt.toggleLabel(c);};box.appendChild(b);return;}if(!isValve(c)){box.hidden=true;return;}box.hidden=false;
   const sides=c.type==='v53'?[['L','◂ Vänster'],['R','Höger ▸']]:[['L',c.params.mode==='hold'?'Håll inne':'Växla läge']];
