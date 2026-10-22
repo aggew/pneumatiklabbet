@@ -100,7 +100,33 @@ h3{margin:16px 0 8px;font:600 12px var(--f-display);letter-spacing:.14em;text-tr
 #hint{position:absolute;left:50%;transform:translateX(-50%);top:10px;z-index:6;background:var(--ink);color:var(--panel);border-radius:999px;padding:6px 6px 6px 14px;font:500 14px var(--f-body);display:flex;gap:10px;align-items:center;max-width:calc(100% - 32px);box-shadow:0 6px 18px var(--shadow)}
 #hint button{border:0;border-radius:999px;background:var(--panel);color:var(--ink);font:600 13px var(--f-body);padding:6px 12px;cursor:pointer}
 #hint button[hidden]{display:none}
-@media (min-width:720px){.sheet{left:auto;right:12px;bottom:12px;width:400px;border-radius:14px;border:1px solid var(--line);max-height:calc(100% - 24px)}}
+nav button.dk,.side,nav .sp{display:none}
+.side-search{width:100%;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:400 14px var(--f-body);padding:0 10px}
+.side-list{flex:1;min-height:0;overflow:auto;padding-bottom:12px}
+.side-list h3{margin:14px 0 6px}
+.side-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.side-grid .pal-item{padding:6px 4px 8px;font-size:12px;cursor:grab}
+.side-grid .pal-item:hover{border-color:var(--air);background:var(--wash)}
+.side-grid .pal-item canvas{width:72px;height:48px}
+.keys{border-top:1px solid var(--line);padding-block:10px;font:400 12px/1.6 var(--f-body);color:var(--muted)}
+.keys kbd{font:500 11px var(--f-mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+nav button:disabled{opacity:.4;cursor:default}
+@media (hover:hover){nav button:not(:disabled):hover{background:var(--wash)}.btn:hover{border-color:var(--muted)}.ex:hover{border-color:var(--air)}}
+@media (min-width:720px){
+  .sheet{left:auto;right:12px;top:12px;bottom:auto;width:380px;border-radius:14px;border:1px solid var(--line);max-height:calc(100% - 24px);box-shadow:0 10px 30px var(--shadow)}
+  .grab{display:none}
+  #graph{top:auto;bottom:12px;right:auto;width:min(640px,calc(100% - 420px));min-width:300px}
+  #clock{bottom:auto;top:10px}
+}
+@media (min-width:900px){
+  #app{grid-template-columns:268px minmax(0,1fr);grid-template-rows:auto auto 1fr;grid-template-areas:"side head" "side nav" "side stage"}
+  header{grid-area:head} #stage{grid-area:stage}
+  nav{grid-area:nav;display:flex;flex-wrap:wrap;gap:2px;border-top:0;border-bottom:1px solid var(--line);padding-block:4px}
+  nav button{flex-direction:row;gap:6px;font-size:13px;padding:6px 10px}
+  nav button.dk{display:flex} nav button.mb{display:none}
+  nav .sp{display:block;flex:1}
+  .side{grid-area:side;display:flex;flex-direction:column;gap:8px;min-height:0;background:var(--panel);border-right:1px solid var(--line);padding:12px 14px 0 max(14px,env(safe-area-inset-left,0px))}
+}
 </style>
 
 </head>
@@ -133,11 +159,22 @@ h3{margin:16px 0 8px;font:600 12px var(--f-display);letter-spacing:.14em;text-tr
   </div>
 
   <nav class="band" aria-label="Verktyg">
-    <button id="addBtn" type="button" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>Komponent</button>
+    <button id="addBtn" class="mb" type="button" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>Komponent</button>
     <button id="graphBtn" type="button" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 20h18M4 16l5-6 4 3 7-8"/></svg>Graf</button>
     <button id="exBtn" type="button" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h6"/></svg>Exempel</button>
     <button id="fitBtn" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Anpassa</button>
+    <button id="zoomIn" class="dk" type="button" title="Zooma in (+)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4M11 8v6M8 11h6"/></svg>Zooma in</button>
+    <button id="zoomOut" class="dk" type="button" title="Zooma ut (−)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4M8 11h6"/></svg>Zooma ut</button>
+    <span class="sp dk" aria-hidden="true"></span>
+    <button id="undoBtn" class="dk" type="button" title="Ångra (Ctrl+Z)" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Ångra</button>
+    <button id="redoBtn" class="dk" type="button" title="Gör om (Ctrl+Shift+Z)" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>Gör om</button>
   </nav>
+  <aside class="side" aria-label="Komponenter">
+    <div class="eyebrow">Komponenter · dra in eller klicka</div>
+    <input id="sideSearch" class="side-search" type="search" placeholder="Sök, t.ex. ventil" aria-label="Sök komponent">
+    <div id="sideList" class="side-list"></div>
+    <div class="keys"><kbd>Mellanslag</kbd> kör/paus · <kbd>R</kbd> rotera · <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicera · <kbd>Del</kbd> ta bort · <kbd>Ctrl</kbd>+<kbd>Z</kbd> ångra · <kbd>pilar</kbd> flytta · <kbd>F</kbd> anpassa · <kbd>G</kbd> graf · <kbd>+</kbd>/<kbd>−</kbd> zoom</div>
+  </aside>
 </div>
 
 <script>
@@ -157,7 +194,8 @@ const F_MONO="500 11px 'IBM Plex Mono',ui-monospace,monospace";
 
 /* ---------- tema ---------- */
 const C={};
-function readTheme(){const cs=getComputedStyle(document.documentElement);for(const k of ['warn','bg','grid','grid2','ink','muted','panel','line','air','accent','danger','ok','s1','s2','s3','s4','s5'])C[k]=cs.getPropertyValue('--'+k).trim();mixCache.clear();}
+let onTheme=null;
+function readTheme(){const cs=getComputedStyle(document.documentElement);for(const k of ['warn','bg','grid','grid2','ink','muted','panel','line','air','accent','danger','ok','s1','s2','s3','s4','s5'])C[k]=cs.getPropertyValue('--'+k).trim();mixCache.clear();if(onTheme)onTheme();}
 const mixCache=new Map();
 function hx(s){s=s.replace('#','');if(s.length===3)s=s.split('').map(c=>c+c).join('');return[parseInt(s.slice(0,2),16),parseInt(s.slice(2,4),16),parseInt(s.slice(4,6),16)];}
 function mix(a,b,t){t=Math.round(t*40)/40;const k=a+b+t;let v=mixCache.get(k);if(v)return v;const A=hx(a),B=hx(b);v=`rgb(${Math.round(A[0]+(B[0]-A[0])*t)},${Math.round(A[1]+(B[1]-A[1])*t)},${Math.round(A[2]+(B[2]-A[2])*t)})`;mixCache.set(k,v);return v;}
@@ -533,9 +571,10 @@ function actCancel(c){if(T[c.type].toggle)return;if(c.params.mode==='hold'){c.st
 /* ---------- komponenter skapa / ta bort ---------- */
 function newComp(type,x,y,params={},rot=0){const t=T[type];let max=0;for(const c of comps)if(T[c.type].short===t.short){const n=parseInt(c.label.slice(t.short.length))||0;max=Math.max(max,n);}
   const c={id:nextId++,type,x,y,rot,params:{...t.def,...params},label:t.short+(max+1)};initSt(c);return c;}
-function addComp(type){const w=toW(W/2,Math.max(80,(H-(sheetVisible()?sheetHeight():0))/2));let x=snap(w.x),y=snap(w.y);
+const isWide=()=>matchMedia('(min-width:720px)').matches;
+function addComp(type,at,params,rot){const w=at||toW(isWide()?Math.min(W/2,W-430):W/2,isWide()?H/2:Math.max(80,(H-(sheetVisible()?sheetHeight():0))/2));let x=snap(w.x),y=snap(w.y);
   while(comps.some(c=>Math.abs(c.x-x)<30&&Math.abs(c.y-y)<30))y+=50;
-  const c=newComp(type,x,y);comps.push(c);reindex();dirty=true;save();select({t:'c',id:c.id});}
+  const c=newComp(type,x,y,params||{},rot||0);comps.push(c);reindex();dirty=true;save();select({t:'c',id:c.id});}
 function delComp(c){comps=comps.filter(k=>k!==c);hoses=hoses.filter(h=>h.a.c!==c.id&&h.b.c!==c.id);for(const k of comps)if(k.params.auto===String(c.id))k.params.auto='';reindex();dirty=true;save();select(null);}
 function addHose(a,b){if(a.c===b.c&&a.p===b.p)return;if(hoses.some(h=>(h.a.c===a.c&&h.a.p===a.p&&h.b.c===b.c&&h.b.p===b.p)||(h.a.c===b.c&&h.a.p===b.p&&h.b.c===a.c&&h.b.p===a.p))){flash('Den slangen finns redan');return;}
   hoses.push({id:nextId++,a:{c:a.c,p:a.p},b:{c:b.c,p:b.p}});dirty=true;save();flash('Slang kopplad');}
@@ -543,7 +582,16 @@ const snap=v=>Math.round(v/10)*10;
 
 /* ---------- spara ---------- */
 let saveT=0;
-function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify({v:1,nextId,comps:comps.map(c=>({id:c.id,type:c.type,x:c.x,y:c.y,rot:c.rot,params:c.params,label:c.label})),hoses}));}catch(_){}},400);}
+const snapshot=()=>JSON.stringify({v:1,nextId,comps:comps.map(c=>({id:c.id,type:c.type,x:c.x,y:c.y,rot:c.rot,params:c.params,label:c.label})),hoses});
+let hist=[],hidx=-1,recPending=false;
+function record(){const sn=snapshot();if(hist[hidx]===sn)return;hist=hist.slice(0,hidx+1);hist.push(sn);if(hist.length>120)hist.shift();hidx=hist.length-1;updUndo();}
+function updUndo(){const u=$('#undoBtn'),r=$('#redoBtn');if(u)u.disabled=hidx<=0;if(r)r.disabled=hidx>=hist.length-1;}
+function restore(sn){const d=JSON.parse(sn);const old=new Map(comps.map(c=>[c.id,c.st]));
+  comps=d.comps.filter(c=>T[c.type]).map(c=>{const k={...c,params:{...T[c.type].def,...c.params}};initSt(k);if(old.has(k.id)&&old.get(k.id))k.st=old.get(k.id);return k;});
+  hoses=d.hoses;nextId=d.nextId;reindex();dirty=true;cancelConnect();select(null);closeAll();save(true);updUndo();}
+function undo(){if(hidx>0){hidx--;restore(hist[hidx]);flash('Ångrat');}}
+function redo(){if(hidx<hist.length-1){hidx++;restore(hist[hidx]);flash('Gjort om');}}
+function save(noRec){if(!noRec)recPending=true;clearTimeout(saveT);saveT=setTimeout(()=>{if(recPending){recPending=false;record();}try{localStorage.setItem(KEY,snapshot());}catch(_){}},400);}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s||s.v!==1||!Array.isArray(s.comps))return false;
   comps=s.comps.filter(c=>T[c.type]).map(c=>{const k={...c,params:{...T[c.type].def,...c.params}};initSt(k);return k;});hoses=(s.hoses||[]).filter(h=>h&&h.a&&h.b);nextId=s.nextId||1;
   for(const c of comps)nextId=Math.max(nextId,c.id+1);for(const h of hoses)nextId=Math.max(nextId,h.id+1);reindex();return true;}catch(_){return false;}}
@@ -589,7 +637,7 @@ function resetSim(){portPg.clear();for(const c of comps)initSt(c);simT=0;dirty=t
 const toW=(sx,sy)=>({x:(sx-view.ox)/view.z,y:(sy-view.oy)/view.z});
 function fit(){if(!W)return;viewTarget=null;if(!comps.length){view.z=1;view.ox=W/2;view.oy=H/2;return;}
   let a=1e9,b=1e9,d=-1e9,e=-1e9;for(const c of comps){const r=wb(c,'fit');a=Math.min(a,r[0]);b=Math.min(b,r[1]-18);d=Math.max(d,r[2]);e=Math.max(e,r[3]);}
-  const pad=28,top=graphOpen?190:0;const z=clamp(Math.min((W-pad*2)/(d-a),(H-top-pad*2)/(e-b)),0.3,1.8);view.z=z;view.ox=W/2-(a+d)/2*z;view.oy=top+(H-top)/2-(b+e)/2*z;}
+  const wide=isWide(),pad=28,top=graphOpen&&!wide?190:0,bot=graphOpen&&wide?200:0,ah=H-top-bot;const z=clamp(Math.min((W-pad*2)/(d-a),(ah-pad*2)/(e-b)),0.3,1.8);view.z=z;view.ox=W/2-(a+d)/2*z;view.oy=top+ah/2-(b+e)/2*z;}
 function resize(){const r=stage.getBoundingClientRect();const first=!W;W=r.width;H=r.height;DPR=Math.max(1,window.devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);if(first)fit();}
 new ResizeObserver(resize).observe(stage);
 
@@ -636,8 +684,15 @@ function render(){
       const tx=q.x*view.z+view.ox+(q.dx===0?9:0),ty=q.y*view.z+view.oy+(q.dx!==0?-9:0);
       g.strokeStyle=C.bg;g.lineWidth=3;g.strokeText(p.id,tx,ty);g.fillStyle=C.muted;g.fillText(p.id,tx,ty);}
     g.textAlign='left';g.textBaseline='alphabetic';}
+  if(hov&&!rubber){let txt='';if(hov.port){const c=byId(hov.port.c);if(c){const q=portWorld(c,hov.port.p);const sx=q.x*view.z+view.ox,sy=q.y*view.z+view.oy;g.strokeStyle=C.accent;g.lineWidth=2;g.beginPath();g.arc(sx,sy,9,0,7);g.stroke();
+      txt=`${c.label}.${hov.port.p}  ${f2(pg(c,hov.port.p))} bar`+(connectFrom?'':'  · klicka eller dra för slang');}}
+    else if(hov.comp){const c=byId(hov.comp);if(c&&!(selS&&selS.t==='c'&&selS.id===c.id)){const b=wb(c);g.setTransform(DPR*view.z,0,0,DPR*view.z,DPR*view.ox,DPR*view.oy);g.strokeStyle=C.line;g.lineWidth=1.5/view.z;g.strokeRect(b[0]-6,b[1]-6,b[2]-b[0]+12,b[3]-b[1]+12);g.setTransform(DPR,0,0,DPR,0,0);txt=c.label+' · '+T[c.type].name;}}
+    else if(hov.hose){const h=hoses.find(k=>k.id===hov.hose);if(h)txt=`Slang · ${f2(pg(byId(h.a.c),h.a.p))} bar`;}
+    else if(hov.act)txt=T[hov.act.c.type].toggle?T[hov.act.c.type].toggleLabel(hov.act.c):hov.act.c.params.mode==='hold'?'Håll inne':'Klicka för att växla';
+    if(txt){g.font="500 12px 'IBM Plex Mono',monospace";const tw2=g.measureText(txt).width+16;let bx=hov.sx+14,by=hov.sy+16;if(bx+tw2>W-4)bx=hov.sx-14-tw2;if(by+24>H)by=hov.sy-34;
+      g.fillStyle=C.ink;g.beginPath();g.roundRect?g.roundRect(bx,by,tw2,24,6):g.rect(bx,by,tw2,24);g.fill();g.fillStyle=C.panel;g.textBaseline='middle';g.fillText(txt,bx+8,by+12.5);g.textBaseline='alphabetic';}}
   if(!comps.length){g.textAlign='center';g.fillStyle=C.ink;g.font="700 22px 'Barlow Condensed',sans-serif";g.fillText('Tomt kretsschema',W/2,H/2-8);
-    g.font="400 14px 'Barlow',sans-serif";g.fillStyle=C.muted;g.fillText('Tryck på Komponent för att lägga till delar,',W/2,H/2+16);g.fillText('eller välj ett färdigt exempel.',W/2,H/2+34);g.textAlign='left';}
+    g.font="400 14px 'Barlow',sans-serif";g.fillStyle=C.muted;g.fillText(isWide()&&matchMedia('(min-width:900px)').matches?'Dra in delar från listan till vänster,':'Tryck på Komponent för att lägga till delar,',W/2,H/2+16);g.fillText('eller välj ett färdigt exempel.',W/2,H/2+34);g.textAlign='left';}
 }
 
 /* ---------- graf ---------- */
@@ -680,7 +735,13 @@ cv.addEventListener('pointerdown',e=>{
   const h=hitHose(w);if(h){pt.kind='hose';pt.hose=h;return;}
   pt.kind='pan';
 });
-cv.addEventListener('pointermove',e=>{const pt=ptrs.get(e.pointerId);if(!pt)return;const s=sxy(e);pt.x=s.x;pt.y=s.y;
+let hov=null;
+function hoverAt(s){if(ptrs.size){return;}const w=toW(s.x,s.y);let h=null,cur='default';
+  const a=hitAct(w);if(a){h={act:a};cur='pointer';}
+  else{const p=hitPort(w);if(p){h={port:p};cur='crosshair';}else{const c=hitComp(w);if(c){h={comp:c.id};cur='grab';}else{const ho=hitHose(w);if(ho){h={hose:ho.id};cur='pointer';}else cur=connectFrom?'crosshair':'grab';}}}
+  hov=h;hov&&(hov.sx=s.x,hov.sy=s.y);cv.style.cursor=cur;}
+cv.addEventListener('pointerleave',()=>{hov=null;});
+cv.addEventListener('pointermove',e=>{const pt=ptrs.get(e.pointerId);if(!pt){if(e.pointerType==='mouse')hoverAt(sxy(e));return;}hov=null;if(pt.kind==='drag'||pt.kind==='pan')cv.style.cursor='grabbing';const s=sxy(e);pt.x=s.x;pt.y=s.y;
   if(!pt.moved&&Math.hypot(pt.x-pt.sx,pt.y-pt.sy)>7)pt.moved=true;
   if(pt.kind==='pinch'&&pinch){const[a,b]=pinchPair();if(!b)return;const d=Math.hypot(a.x-b.x,a.y-b.y);const z=clamp(pinch.z0*d/pinch.d0,0.25,4);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;view.z=z;view.ox=mx-pinch.w.x*z;view.oy=my-pinch.w.y*z;}
   else if(pt.kind==='hose'&&pt.moved)pt.kind='pan';
@@ -697,9 +758,11 @@ function endPtr(e,cancel){const pt=ptrs.get(e.pointerId);ptrs.delete(e.pointerId
   else if(pt.kind==='hose'){cancelConnect();select({t:'h',id:pt.hose.id});}
   else if(pt.kind==='pan'&&!pt.moved){cancelConnect();select(null);closeAll();}
 }
-cv.addEventListener('pointerup',e=>endPtr(e,false));
+cv.addEventListener('pointerup',e=>{endPtr(e,false);if(e.pointerType==='mouse')hoverAt(sxy(e));});
 cv.addEventListener('pointercancel',e=>endPtr(e,true));
-cv.addEventListener('wheel',e=>{e.preventDefault();viewTarget=null;const s=sxy(e);const w=toW(s.x,s.y);const z=clamp(view.z*Math.exp(-e.deltaY*0.0015),0.25,4);view.z=z;view.ox=s.x-w.x*z;view.oy=s.y-w.y*z;},{passive:false});
+cv.addEventListener('wheel',e=>{e.preventDefault();viewTarget=null;const s=sxy(e);
+  const pad=!e.ctrlKey&&e.deltaMode===0&&(e.deltaX!==0||Math.abs(e.deltaY)<40);if(pad){view.ox-=e.deltaX;view.oy-=e.deltaY;return;}
+  const w=toW(s.x,s.y);const z=clamp(view.z*Math.exp(-e.deltaY*(e.ctrlKey?0.01:0.0015)),0.25,4);view.z=z;view.ox=s.x-w.x*z;view.oy=s.y-w.y*z;},{passive:false});
 function portTap(port){if(!connectFrom){connectFrom=port;closeAll();select(null,true);hint('Tryck på porten slangen ska gå till',true);}
   else if(connectFrom.c===port.c&&connectFrom.p===port.p)cancelConnect();
   else{addHose(connectFrom,port);connectFrom=null;}}
@@ -707,7 +770,19 @@ function cancelConnect(){if(connectFrom){connectFrom=null;hideHint();}}
 document.addEventListener('keydown',e=>{if(e.target.closest&&e.target.closest('input,select,textarea'))return;
   if((e.key==='Delete'||e.key==='Backspace')&&selS){e.preventDefault();if(selS.t==='c'){const c=byId(selS.id);if(c)delComp(c);}else{hoses=hoses.filter(h=>h.id!==selS.id);dirty=true;save();select(null);}}
   if(e.key==='Escape'){cancelConnect();select(null);closeAll();}
-  if(e.key===' '&&!e.repeat){e.preventDefault();togglePlay();}});
+  if(e.key===' '&&!e.repeat){e.preventDefault();togglePlay();}
+  const mod=e.ctrlKey||e.metaKey,k=e.key.toLowerCase(),sc=selS&&selS.t==='c'?byId(selS.id):null;
+  if(mod&&k==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
+  if(mod&&k==='y'){e.preventDefault();redo();return;}
+  if(mod&&k==='d'&&sc){e.preventDefault();addComp(sc.type,{x:sc.x+40,y:sc.y+40},{...sc.params},sc.rot);return;}
+  if(mod)return;
+  if(k==='r'&&sc){sc.rot=(sc.rot+1)&3;dirty=true;save();}
+  else if(k==='f')fit();
+  else if(k==='g')$('#graphBtn').click();
+  else if(k==='+'||k==='=')zoomBy(1.25);
+  else if(k==='-')zoomBy(0.8);
+  else if(sc&&e.key.startsWith('Arrow')){e.preventDefault();const st=e.shiftKey?50:10;if(e.key==='ArrowLeft')sc.x-=st;if(e.key==='ArrowRight')sc.x+=st;if(e.key==='ArrowUp')sc.y-=st;if(e.key==='ArrowDown')sc.y+=st;dirty=true;save();}});
+function zoomBy(f){viewTarget=null;const cx=W/2,cy=H/2,w=toW(cx,cy);view.z=clamp(view.z*f,0.25,4);view.ox=cx-w.x*view.z;view.oy=cy-w.y*view.z;}
 
 /* ---------- tips ---------- */
 const hintEl=$('#hint'),hintText=$('#hintText'),hintBtn=$('#hintBtn');let hintT=0;
@@ -725,7 +800,7 @@ function closeAll(keepSel){sheet.hidden=true;palette.hidden=true;examples.hidden
 function select(s,silent){selS=s;if(!s){sheet.hidden=true;return;}if(silent)return;
   if(s.t==='c'){const c=byId(s.id);if(c)openComp(c);}else{const h=hoses.find(k=>k.id===s.id);if(h)openHose(h);}}
 function keepVisible(wx,wy){requestAnimationFrame(()=>{const sh=sheetHeight();const sy=wy*view.z+view.oy;const sx=wx*view.z+view.ox;const lim=H-sh-50;let ty=view.oy,tx=view.ox;
-  if(sy>lim||sy<40)ty=view.oy+((H-sh)/2-sy);if(W>=720&&sx>W-420)tx=view.ox+((W-420)/2-sx);if(ty!==view.oy||tx!==view.ox)viewTarget={ox:tx,oy:ty};});}
+  if(isWide()){if(sx>W-420||sx<30)tx=view.ox+((W-400)/2-sx);}else if(sy>lim||sy<40)ty=view.oy+((H-sh)/2-sy);if(ty!==view.oy||tx!==view.ox)viewTarget={ox:tx,oy:ty};});}
 function head(eyebrow,title,sub){return`<div class="grab" aria-hidden="true"></div><div class="sh-head"><div class="ttl"><div class="eyebrow">${eyebrow}</div><h2>${title} ${sub?`<span>${sub}</span>`:''}</h2></div>
   <button class="btn icon" data-min aria-label="Minimera">${sheetMin?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 15l6-6 6 6"/></svg>':'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>'}</button>
   <button class="btn icon" data-close aria-label="Stäng"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;}
@@ -814,6 +889,17 @@ $('#speed').onchange=e=>{speed=+e.target.value;};
 $('#addBtn').onclick=()=>{cancelConnect();openPalette();};
 $('#exBtn').onclick=()=>{cancelConnect();openExamples();};
 $('#fitBtn').onclick=()=>fit();
+$('#zoomIn').onclick=()=>zoomBy(1.25);$('#zoomOut').onclick=()=>zoomBy(0.8);$('#undoBtn').onclick=undo;$('#redoBtn').onclick=redo;
+const sideList=$('#sideList'),sideSearch=$('#sideSearch');
+function buildSide(){const q=sideSearch.value.trim().toLowerCase();
+  sideList.innerHTML=CATS.map(([cat,types])=>{const ts=types.filter(t=>!q||T[t].name.toLowerCase().includes(q)||cat.toLowerCase().includes(q));return ts.length?`<h3>${cat}</h3><div class="side-grid">${ts.map(t=>`<button class="pal-item" type="button" draggable="true" data-t="${t}" title="Dra till schemat eller klicka"><canvas aria-hidden="true"></canvas>${T[t].name}</button>`).join('')}</div>`:'';}).join('')||'<p class="keys">Ingen komponent matchar.</p>';
+  sideList.querySelectorAll('.pal-item').forEach(b=>{drawIcon(b.querySelector('canvas'),b.dataset.t);b.onclick=()=>addComp(b.dataset.t);
+    b.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','pnl:'+b.dataset.t);e.dataTransfer.effectAllowed='copy';});});}
+sideSearch.addEventListener('input',buildSide);
+cv.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';});
+cv.addEventListener('drop',e=>{e.preventDefault();const d=e.dataTransfer.getData('text/plain')||'';if(!d.startsWith('pnl:'))return;const t=d.slice(4);if(!T[t])return;const s=sxy(e);const w=toW(s.x,s.y);addComp(t,{x:w.x,y:w.y});});
+onTheme=()=>{if(sideList.childElementCount)buildSide();};
+buildSide();
 $('#graphBtn').onclick=()=>{graphOpen=!graphOpen;$('#graph').hidden=!graphOpen;$('#graphBtn').setAttribute('aria-pressed',String(graphOpen));updateLegend();};
 drawPlay();
 
@@ -835,6 +921,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 if(!load())loadExample(EX[0]);else{dirty=true;}
+record();
 resize();fit();
 requestAnimationFrame(frame);
 })();
