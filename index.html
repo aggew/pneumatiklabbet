@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e8ecf0">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Pneumatiklabbet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: workbench — slim header, full-bleed schematic canvas (grid paper), bottom tool bar; sheets slide up over the canvas */
+:root{
+  --bg:#e8ecf0; --grid:#dbe1e7; --grid2:#c8d1da; --ink:#17222d; --muted:#5a6876; --panel:#fbfcfd; --line:#c3ccd5;
+  --air:#1662cc; --accent:#d4621a; --danger:#b8352a; --ok:#2a8a5f; --wash:#dfe8f4; --warn:#d9a400;
+  --s1:#1662cc; --s2:#d4621a; --s3:#2a8a5f; --s4:#8a4bc4; --s5:#b8325a;
+  --shadow:rgba(20,32,46,.14);
+  --f-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e141a; --grid:#161f28; --grid2:#202c38; --ink:#d9e3ed; --muted:#8696a7; --panel:#141c25; --line:#2a3745;
+  --air:#4ea2ff; --accent:#f08b3d; --danger:#ef6b5b; --ok:#4cc38a; --wash:#16283c; --warn:#f2c230;
+  --s1:#4ea2ff; --s2:#f08b3d; --s3:#4cc38a; --s4:#b98cf0; --s5:#f06f95;
+  --shadow:rgba(0,0,0,.5); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0e141a; --grid:#161f28; --grid2:#202c38; --ink:#d9e3ed; --muted:#8696a7; --panel:#141c25; --line:#2a3745;
+  --air:#4ea2ff; --accent:#f08b3d; --danger:#ef6b5b; --ok:#4cc38a; --wash:#16283c; --warn:#f2c230;
+  --s1:#4ea2ff; --s2:#f08b3d; --s3:#4cc38a; --s4:#b98cf0; --s5:#f06f95;
+  --shadow:rgba(0,0,0,.5); color-scheme:dark;
+}
+html{height:100%;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.4 var(--f-body);overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+#app{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+.band{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;align-items:center;gap:10px;padding-block:8px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:8px;font:700 19px/1 var(--f-display);letter-spacing:.04em;text-transform:uppercase;min-width:0;flex:1}
+.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand svg{flex:none;color:var(--air)}
+.ctrls{display:flex;gap:6px;align-items:center;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:500 14px var(--f-body);cursor:pointer;touch-action:manipulation}
+.btn:focus-visible,select:focus-visible,input:focus-visible,nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.run{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn.icon{width:36px;padding:0}
+select.btn{padding:0 10px;appearance:none;-webkit-appearance:none;font-family:var(--f-mono);font-size:13px}
+#stage{position:relative;overflow:hidden;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block;cursor:crosshair}
+#clock{position:absolute;left:max(12px,env(safe-area-inset-left,0px));bottom:10px;font:500 12px var(--f-mono);color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums}
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--panel);border-top:1px solid var(--line);padding-block:4px}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;color:var(--ink);font:600 12px var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:7px 2px;border-radius:8px;cursor:pointer;touch-action:manipulation}
+nav button[aria-pressed="true"]{color:var(--air);background:var(--wash)}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:64%;overflow:auto;background:var(--panel);border-top:1px solid var(--line);border-radius:14px 14px 0 0;box-shadow:0 -10px 28px var(--shadow);padding-block:4px 18px;z-index:5;overscroll-behavior:contain}
+.grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:6px auto 4px}
+.sh-head{display:flex;align-items:flex-start;gap:8px;padding-block:4px 10px}
+.sh-head .ttl{flex:1;min-width:0}
+.eyebrow{font:600 11px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h2{margin:2px 0 0;font:700 24px/1.05 var(--f-display);letter-spacing:.01em;text-wrap:balance}
+h2 span{font-weight:500;color:var(--muted);font-size:18px}
+h3{margin:16px 0 8px;font:600 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ro{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px 14px;margin:0 0 12px;padding:10px 12px;background:var(--wash);border-radius:10px}
+.ro div{min-width:0}
+.ro dt{font:600 11px var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.ro dd{margin:1px 0 0;font:500 15px var(--f-mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.act{display:flex;gap:8px;margin:0 0 12px}
+.act .btn{flex:1;height:52px;font:700 16px var(--f-display);letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:#fff;border-color:var(--accent);user-select:none;-webkit-user-select:none;touch-action:none}
+.act .btn.on{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.params{display:grid;gap:14px}
+.prm{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px}
+.prm label{font:500 14px var(--f-body)}
+.prm input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--air);height:28px;margin:0}
+.pv{display:flex;align-items:center;gap:6px;font:500 13px var(--f-mono);color:var(--muted)}
+.prm input:disabled{opacity:.55}
+.pv input{width:82px;height:32px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:500 14px var(--f-mono);padding:0 8px;text-align:right}
+.prm select{grid-column:1/-1;width:100%;height:40px;font-family:var(--f-body);font-size:15px;text-align:left;justify-content:flex-start}
+.foot{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.foot .btn{flex:1;min-width:120px;height:42px}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+.btn.danger.arm{background:var(--danger);color:#fff}
+.sheet.min .params,.sheet.min .foot{display:none}
+.pal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:8px}
+.pal-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);cursor:pointer;font:500 13px/1.2 var(--f-body);text-align:center;touch-action:manipulation}
+.pal-item canvas{width:84px;height:56px}
+.ex-list{display:grid;gap:8px}
+.ex{display:grid;gap:2px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);cursor:pointer;font:400 14px/1.35 var(--f-body)}
+.ex b{font:700 18px var(--f-display);letter-spacing:.02em}
+.ex span{color:var(--muted)}
+.help{margin:0;padding-left:18px;max-width:62ch;color:var(--ink)}
+.help li{margin:4px 0}
+#graph{position:absolute;top:8px;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));height:178px;background:var(--panel);border:1px solid var(--line);border-radius:10px;z-index:3;display:grid;grid-template-rows:auto 1fr;box-shadow:0 6px 20px var(--shadow);overflow:hidden}
+#legend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 10px 0;font:500 11px var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted);min-height:20px}
+#legend .lg{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+#legend .lg b{color:var(--ink);font-weight:500}
+#legend i{width:12px;height:3px;border-radius:2px;display:inline-block}
+.k0{background:var(--s1)}.k1{background:var(--s2)}.k2{background:var(--s3)}.k3{background:var(--s4)}.k4{background:var(--s5)}
+#gcv{width:100%;height:100%;display:block;min-height:0}
+#hint{position:absolute;left:50%;transform:translateX(-50%);top:10px;z-index:6;background:var(--ink);color:var(--panel);border-radius:999px;padding:6px 6px 6px 14px;font:500 14px var(--f-body);display:flex;gap:10px;align-items:center;max-width:calc(100% - 32px);box-shadow:0 6px 18px var(--shadow)}
+#hint button{border:0;border-radius:999px;background:var(--panel);color:var(--ink);font:600 13px var(--f-body);padding:6px 12px;cursor:pointer}
+#hint button[hidden]{display:none}
+@media (min-width:720px){.sheet{left:auto;right:12px;bottom:12px;width:400px;border-radius:14px;border:1px solid var(--line);max-height:calc(100% - 24px)}}
+</style>
+
+</head>
+<body>
+<div id="app">
+  <header class="band">
+    <div class="brand">
+      <svg width="30" height="18" viewBox="0 0 30 18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="1" y="3" width="17" height="12"/><rect x="9" y="4" width="3" height="10" fill="currentColor"/><line x1="12" y1="9" x2="29" y2="9"/></svg>
+      <span>Pneumatiklabbet</span>
+    </div>
+    <div class="ctrls">
+      <button id="play" class="btn run" aria-label="Pausa simuleringen"></button>
+      <button id="reset" class="btn icon" aria-label="Nollställ tryck och lägen" title="Nollställ">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v5h5"/></svg>
+      </button>
+      <select id="speed" class="btn" aria-label="Simuleringshastighet">
+        <option value="1">1×</option><option value="0.5">½×</option><option value="0.25">¼×</option><option value="0.1">0,1×</option>
+      </select>
+    </div>
+  </header>
+
+  <div id="stage">
+    <canvas id="cv" aria-label="Kretsschema"></canvas>
+    <div id="graph" hidden><div id="legend"></div><canvas id="gcv"></canvas></div>
+    <div id="hint" hidden><span id="hintText"></span><button id="hintBtn" type="button">Avbryt</button></div>
+    <div id="clock">t = 0,00 s</div>
+    <section id="sheet" class="sheet band" hidden aria-label="Egenskaper"></section>
+    <section id="palette" class="sheet band" hidden aria-label="Lägg till komponent"></section>
+    <section id="examples" class="sheet band" hidden aria-label="Exempel och hjälp"></section>
+  </div>
+
+  <nav class="band" aria-label="Verktyg">
+    <button id="addBtn" type="button" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>Komponent</button>
+    <button id="graphBtn" type="button" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 20h18M4 16l5-6 4 3 7-8"/></svg>Graf</button>
+    <button id="exBtn" type="button" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h6"/></svg>Exempel</button>
+    <button id="fitBtn" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Anpassa</button>
+  </nav>
+</div>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const cv=$('#cv'), g=cv.getContext('2d'), stage=$('#stage');
+const gcv=$('#gcv'), gx=gcv.getContext('2d');
+let W=0,H=0,DPR=Math.max(1,window.devicePixelRatio||1);
+const view={ox:0,oy:0,z:1}; let viewTarget=null;
+const KEY='pneumatiklabbet-v1';
+const PV=0.01;           // liter per port (inre volym)
+let DT=1e-4;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const F_LBL="600 12px 'Barlow Condensed','Arial Narrow',sans-serif";
+const F_MONO="500 11px 'IBM Plex Mono',ui-monospace,monospace";
+
+/* ---------- tema ---------- */
+const C={};
+function readTheme(){const cs=getComputedStyle(document.documentElement);for(const k of ['warn','bg','grid','grid2','ink','muted','panel','line','air','accent','danger','ok','s1','s2','s3','s4','s5'])C[k]=cs.getPropertyValue('--'+k).trim();mixCache.clear();}
+const mixCache=new Map();
+function hx(s){s=s.replace('#','');if(s.length===3)s=s.split('').map(c=>c+c).join('');return[parseInt(s.slice(0,2),16),parseInt(s.slice(2,4),16),parseInt(s.slice(4,6),16)];}
+function mix(a,b,t){t=Math.round(t*40)/40;const k=a+b+t;let v=mixCache.get(k);if(v)return v;const A=hx(a),B=hx(b);v=`rgb(${Math.round(A[0]+(B[0]-A[0])*t)},${Math.round(A[1]+(B[1]-A[1])*t)},${Math.round(A[2]+(B[2]-A[2])*t)})`;mixCache.set(k,v);return v;}
+function pcol(p){if(!(p>0.03))return C.muted;return mix(C.muted,C.air,0.35+0.65*clamp(p/7,0,1));}
+readTheme();
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(readTheme,0));}catch(_){}
+new MutationObserver(()=>readTheme()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','class','style']});
+
+/* ---------- modell ---------- */
+let comps=[],hoses=[],nextId=1,idMap=new Map();
+let running=true,speed=1,simT=0,tw=0;
+const portPg=new Map();
+let nets=[],Vn=new Float64Array(0),Pn=new Float64Array(0),Dn=new Float64Array(0);
+let dirty=true;
+const key=(c,p)=>c+':'+p;
+const isValve=c=>c.type==='v32'||c.type==='v52'||c.type==='v53';
+const isCyl=c=>c.type==='cylD'||c.type==='cylS';
+function reindex(){idMap=new Map(comps.map(c=>[c.id,c]));}
+const byId=id=>idMap.get(id);
+function pa(n){return(n===undefined||n<0)?1:Pn[n];}
+function pg(c,pid){const n=c.pn&&c.pn[pid];if(n===undefined||n<0||n>=Pn.length)return 0;return Pn[n]-1;}
+const f2=v=>(Math.abs(v)<0.005?0:v).toFixed(2).replace('.',',');
+const f1=v=>(+v).toFixed(1).replace('.',',');
+const fq=q=>Math.round(Math.max(0,q)*60)+' NL/min';
+
+/* flöde enligt förenklad ISO 6358: q = C·p1·φ(p2/p1), b = 0,5 */
+function phi(r){if(r<=0.5)return 1;const t=(r-0.5)/0.5;return Math.sqrt(Math.max(0,1-t*t));}
+function flow(a,b,p1,p2,Cc,oneway){
+  if(!(Cc>0)||(a<0&&b<0)||(a===b))return 0;
+  let q;
+  if(p1>=p2)q=Cc*p1*phi(p2/p1);
+  else{if(oneway)return 0;q=-Cc*p2*phi(p1/p2);}
+  let dn=q*DT;
+  const Va=a<0?0:Vn[a],Vb=b<0?0:Vn[b];
+  const Ve=a<0?Vb:b<0?Va:Va*Vb/(Va+Vb);
+  const lim=Math.abs(p1-p2)*Ve*0.5;
+  if(dn>lim)dn=lim;else if(dn<-lim)dn=-lim;
+  if(a>=0)Dn[a]-=dn;if(b>=0)Dn[b]+=dn;
+  return dn/DT;
+}
+
+/* ---------- ritverktyg ---------- */
+function ln(x,a,b,c,d){x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke();}
+function circ(x,cx,cy,r,fill){x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);if(fill){x.fillStyle=fill;x.fill();}x.stroke();}
+function box(x,a,b,w,h,fill){if(fill){x.fillStyle=fill;x.fillRect(a,b,w,h);}x.strokeRect(a,b,w,h);}
+function arrowTo(x,a,b,c,d,s=6){ln(x,a,b,c,d);const an=Math.atan2(d-b,c-a);x.beginPath();x.moveTo(c,d);x.lineTo(c-s*Math.cos(an-0.42),d-s*Math.sin(an-0.42));x.lineTo(c-s*Math.cos(an+0.42),d-s*Math.sin(an+0.42));x.closePath();x.fillStyle=x.strokeStyle;x.fill();}
+function zig(x,a,b,c,d,n=6,amp=4){const dx=c-a,dy=d-b,L=Math.hypot(dx,dy)||1,px=-dy/L,py=dx/L;x.beginPath();x.moveTo(a,b);for(let i=1;i<=n;i++){const t=(i-0.5)/n,s=i%2?1:-1;x.lineTo(a+dx*t+px*amp*s,b+dy*t+py*amp*s);}x.lineTo(c,d);x.stroke();}
+function portDef(type,id){return T[type].ports.find(p=>p.id===id);}
+function stub(x,c,pid,x0,y0){const p=portDef(c.type,pid);x.lineWidth=3;x.strokeStyle=pcol(pg(c,pid));ln(x,x0,y0,p.x,p.y);x.lineWidth=2;x.strokeStyle=C.ink;}
+function adj(x,a,b,c,d){const s=x.strokeStyle;x.lineWidth=1.5;x.strokeStyle=C.ink;arrowTo(x,a,b,c,d,5);x.lineWidth=2;x.strokeStyle=s;}
+function exhTri(x,ax,ay,dx,dy){const px=-dy,py=dx;x.beginPath();x.moveTo(ax+px*6,ay+py*6);x.lineTo(ax+dx*9,ay+dy*9);x.lineTo(ax-px*6,ay-py*6);x.closePath();x.fillStyle=C.panel;x.fill();x.stroke();}
+function puff(x,ax,ay,dx,dy,q){if(!(q>0.08))return;const L=Math.min(24,7+q*1.2),px=-dy,py=dx;x.save();x.strokeStyle=C.muted;x.lineWidth=1.5;x.lineCap='round';
+  for(let i=0;i<3;i++){const ph=(tw*3.2+i/3)%1,o=4+ph*L,sp=(i-1)*0.55;x.globalAlpha=0.9*(1-ph);const bx=ax+dx*o+px*sp*o,by=ay+dy*o+py*sp*o;ln(x,bx,by,bx+dx*5+px*sp*3,by+dy*5+py*sp*3);}x.restore();}
+function fitBody(x,ends,p){x.lineWidth=3.5;x.strokeStyle=pcol(p);for(const[a,b]of ends)ln(x,0,0,a*0.6,b*0.6);x.lineWidth=2;x.strokeStyle=C.ink;for(const[a,b]of ends){const L=Math.hypot(a,b),ux=a/L,uy=b/L;ln(x,ux*14-uy*5,uy*14+ux*5,ux*14+uy*5,uy*14-ux*5);}x.beginPath();x.arc(0,0,4.5,0,7);x.fillStyle=C.ink;x.fill();}
+const P=(id,x,y,dx,dy,exh)=>({id,x,y,dx,dy,exh:!!exh});
+const rng=(k,label,min,max,step,unit)=>({k,label,min,max,step,unit,t:'range'});
+const sel=(k,label,opts)=>({k,label,opts,t:'select'});
+
+/* ---------- ventiler ---------- */
+const VP={v32:{A:[0,-1],P:[-15,1],R:[15,1]},v5:{A:[-15,-1],B:[15,-1],R:[-20,1],P:[0,1],S:[20,1]}};
+const vmap=c=>c.type==='v32'?VP.v32:VP.v5;
+function boxesOf(c){
+  if(c.type==='v32')return[[['P','A']],[['A','R']]];
+  if(c.type==='v52')return[[['P','A'],['B','S']],[['P','B'],['A','R']]];
+  const mid=c.params.center==='exh'?[['A','R'],['B','S']]:[];
+  return[[['P','A'],['B','S']],mid,[['P','B'],['A','R']]];
+}
+function actPos(c){const n=boxesOf(c).length,a=c.st.anim;const L=-a*60-30,R=(n-1-a)*60+30;const out=[{side:'L',x:L-(n===3?24:18),y:0}];if(n===3)out.push({side:'R',x:R+24,y:0});return out;}
+function valveEdges(c){
+  const C0=c.params.C,st=c.st;st.ex.R=0;st.ex.S=0;
+  for(const[f,t]of boxesOf(c)[st.pos]){const nf=c.pn[f],nt=c.pn[t];const q=flow(nf,nt,pa(nf),pa(nt),C0,0);if(nt<0)st.ex[t]=q;}
+}
+function drawValve(x,c){
+  const map=vmap(c),bx=boxesOf(c),n=bx.length,a=c.st.anim;
+  for(const p of T[c.type].ports){
+    if(p.exh&&c.pn&&c.pn[p.id]===-1){x.lineWidth=2;x.strokeStyle=C.ink;ln(x,p.x,22,p.x,30);exhTri(x,p.x,30,0,1);puff(x,p.x,40,0,1,c.st.exs[p.id]||0);}
+    else stub(x,c,p.id,p.x,p.y>0?22:-22);
+  }
+  for(let k=0;k<n;k++){
+    const cx=(k-a)*60,act=k===c.st.pos;
+    x.lineWidth=2;x.strokeStyle=C.ink;box(x,cx-30,-22,60,44,act?C.panel:C.bg);
+    const used=new Set();
+    for(const[f,t]of bx[k]){used.add(f);used.add(t);const F=map[f],G=map[t];
+      x.strokeStyle=act?pcol(Math.max(pg(c,f),pg(c,t))):C.muted;x.lineWidth=act?2.5:1.5;
+      arrowTo(x,cx+F[0],F[1]*22,cx+G[0],G[1]*22,6);}
+    x.strokeStyle=act?C.ink:C.muted;x.lineWidth=act?2:1.5;
+    for(const id in map){if(used.has(id))continue;const[px,s]=map[id];ln(x,cx+px,s*22,cx+px,s*11);ln(x,cx+px-5,s*11,cx+px+5,s*11);}
+  }
+  x.lineWidth=2;x.strokeStyle=C.ink;
+  const L=-a*60-30,R=(n-1-a)*60+30;
+  const btn=(bxp,edge,dir,on)=>{ln(x,edge,0,bxp-dir*9,0);x.beginPath();x.arc(bxp,0,9,0,Math.PI*2);x.fillStyle=on?C.accent:C.panel;x.fill();x.stroke();ln(x,bxp+dir*9,-9,bxp+dir*9,9);};
+  if(n===2){btn(L-18,L,-1,c.st.pos===0);x.lineWidth=1.5;zig(x,R,0,R+20,0,6,6);}
+  else{btn(L-24,L,-1,c.st.pos===0);btn(R+24,R,1,c.st.pos===2);x.lineWidth=1.5;zig(x,L,13,L-18,13,5,4);zig(x,R,13,R+18,13,5,4);}
+  if(c.params.auto){x.font="700 10px 'Barlow Condensed',sans-serif";x.fillStyle=C.accent;x.textAlign='center';x.fillText('AUTO',L-18,-14);x.textAlign='left';}
+}
+const valveParams=extra=>[rng('C','Flödeskapacitet',0.1,4,0.1,'NL/s/bar'),sel('mode','Manövrering',[['hold','Fjäderåtergång (håll inne)'],['toggle','Låsande (tryck för att växla)']]),...extra];
+const posNames={v32:['Aktiverad · P→A','Vila · A→R'],v52:['Aktiverad · P→A, B→S','Vila · P→B, A→R']};
+
+/* ---------- cylindrar ---------- */
+function geo(c){const D=c.params.bore/1000,d=Math.min(c.params.rod,c.params.bore-1)/1000;const Ac=Math.PI*D*D/4,Ar=Math.PI*d*d/4;return{Ac,Ar,An:Ac-Ar,L:c.params.stroke/1000};}
+function cylV(c,side){const G=c._g,x=clamp(c.st.x,0,G.L);return side?G.An*(G.L-x+0.005)*1000:G.Ac*(x+0.005)*1000;}
+function cylDyn(c,dt){
+  const G=c._g,st=c.st,pr=c.params,dbl=c.type==='cylD';
+  const pA=pa(c.pn.A),pB=dbl?pa(c.pn.B):1;
+  let x=clamp(st.x,0,G.L);
+  const Fp=dbl?(pA*G.Ac-pB*G.An-G.Ar)*1e5:(pA-1)*G.Ac*1e5;
+  const F=Fp-pr.fext-(pr.grav==='yes'?pr.mass*9.81:0)-(dbl?0:pr.s0+(pr.s1-pr.s0)*(G.L>0?x/G.L:0));
+  const m=Math.max(0.2,pr.mass+0.25),Ff=pr.fric;let v=st.v,a;
+  if(v===0)a=Math.abs(F)<=Ff?0:(F-Math.sign(F)*Ff)/m;
+  else a=(F-Math.sign(v)*Ff-25*v)/m;
+  let vn=v+a*dt;
+  if(v!==0&&Math.sign(vn)!==Math.sign(v))vn=0;
+  x+=vn*dt;
+  if(x<=0){x=0;if(vn<0)vn=0;}else if(x>=G.L){x=G.L;if(vn>0)vn=0;}
+  st.x=x;st.v=vn;st.Fp=Fp;st.F=F;
+}
+function drawCyl(x,c){
+  const dbl=c.type==='cylD',G=c._g||geo(c),f=G.L>0?clamp(c.st.x/G.L,0,1):0,px=-72+144*f;
+  const hh=clamp(9+9*Math.sqrt(c.params.bore/32),11,28),rh=clamp(hh*Math.min(c.params.rod,c.params.bore-1)/c.params.bore,2,hh-4);
+  stub(x,c,'A',-66,hh);if(dbl)stub(x,c,'B',66,hh);
+  x.save();x.globalAlpha=0.3;x.fillStyle=pcol(pg(c,'A'));x.fillRect(-78,-hh+2,px-4+78,2*hh-4);
+  if(dbl){x.fillStyle=pcol(pg(c,'B'));x.fillRect(px+4,-hh+2,74-px,2*hh-4);}x.restore();
+  x.strokeStyle=C.ink;x.lineWidth=2;x.strokeRect(-80,-hh,160,2*hh);
+  if(!dbl){x.lineWidth=1.5;zig(x,px+4,0,78,0,9,hh-5);x.lineWidth=2;ln(x,64,-hh,64,-hh-7);ln(x,60,-hh-7,68,-hh-7);}
+  x.fillStyle=C.ink;x.fillRect(px-4,-hh+2,8,2*hh-4);
+  const re=px+164;x.fillStyle=C.panel;x.fillRect(px+4,-rh,re-px-4,2*rh);x.strokeRect(px+4,-rh,re-px-4,2*rh);
+  const lh=clamp(10+c.params.mass*0.05,10,24);
+  if(c.params.mass>0||c.params.fext!==0){x.fillStyle=C.grid2;x.fillRect(re,-lh,26,2*lh);x.strokeRect(re,-lh,26,2*lh);}
+  if(c.params.grav==='yes'&&c.params.mass>0){x.strokeStyle=C.accent;x.lineWidth=2.5;arrowTo(x,re+50,0,re+31,0,7);x.strokeStyle=C.ink;x.lineWidth=2;}
+}
+const cylParams=single=>[sel('grav','Lodrät last',[['no','Nej, bara massa (liggande)'],['yes','Ja, vikten trycker mot utgång']]),rng('bore','Kolvdiameter',8,200,1,'mm'),rng('rod','Stångdiameter',3,120,1,'mm'),rng('stroke','Slaglängd',10,1000,5,'mm'),rng('mass','Lastmassa',0,500,0.5,'kg'),rng('fext','Yttre kraft mot utgång',-5000,5000,10,'N'),...(single?[rng('s0','Fjäderkraft, inne',0,2000,5,'N'),rng('s1','Fjäderkraft, ute',0,2000,5,'N')]:[]),rng('fric','Friktion',0,500,1,'N')];
+function cylInfo(c){const G=c._g,st=c.st,dbl=c.type==='cylD';const r=[['Läge',Math.round(st.x*1000)+' mm · '+Math.round(G.L>0?100*st.x/G.L:0)+' %'],['Hastighet',f2(st.v)+' m/s'],['Tryck A',f2(pg(c,'A'))+' bar']];if(dbl)r.push(['Tryck B',f2(pg(c,'B'))+' bar']);r.push(['Luftkraft',Math.round(st.Fp||0)+' N']);const W0=(c.params.grav==='yes'?c.params.mass*9.81:0)+c.params.fext;if(W0)r.push(['Last',Math.round(W0)+' N'],['Bärtryck under kolv',f2(W0/G.Ac/1e5)+' bar']);r.push(['Teor. kraft ut @6 bar',Math.round(6e5*G.Ac)+' N']);return r;}
+
+/* automatik: regulatorn räknar fram trycket som bär lasten och finjusterar mot önskad höjd */
+function autoSet(c){const y=c._cyl,G=y._g,pr=y.params,st=c.st;if(!(G.L>0))return c.params.set;
+  const x=clamp(y.st.x,0,G.L);const W=(pr.grav==='yes'?pr.mass*9.81:0)+pr.fext+(y.type==='cylS'?pr.s0+(pr.s1-pr.s0)*x/G.L:0);
+  let e=(c.params.target/100*G.L-x)/G.L,v=y.st.v,ff;
+  if(c._side==='D'){ff=W/1e5/G.Ar;}
+  else if(c._side==='B'){ff=(pa(y.pn.A)*G.Ac-G.Ar-W/1e5)/G.An-1;e=-e;v=-v;}
+  else{const pB=y.type==='cylD'?pa(y.pn.B):1;ff=y.type==='cylD'?(pB*G.An+G.Ar+W/1e5)/G.Ac-1:W/1e5/G.Ac;}
+  if(Math.abs(e)<0.15)st.I=clamp((st.I||0)+e*DT*AKI,-1,1);
+  return clamp(ff+AKP*e+(st.I||0)-AKD*v,0,10);}
+const AKP=3,AKI=1,AKD=6;
+
+const zoneOn=c=>!!(c._zone&&!c._zone.st.on);
+const zoneSel=()=>sel('zone','Styrs av säkerhetszon',c=>[['','Ingen'],...comps.filter(k=>k.type==='zone').map(k=>[String(k.id),k.label])]);
+
+/* ---------- komponenttyper ---------- */
+const T={
+source:{name:'Tryckkälla',short:'K',cat:'Försörjning',box:[-24,-30,24,24],ports:[P('P',0,-30,0,-1)],
+  params:[rng('p','Tryck',0,10,0.1,'bar'),rng('cap','Kapacitet',0.2,10,0.1,'NL/s/bar')],def:{p:6,cap:4},
+  tag:c=>f1(c.params.p)+' bar',
+  edges(c){const n=c.pn.P;c.st.q=flow(-1,n,c.params.p+1,pa(n),c.params.cap,1);},
+  info:c=>[['Inställt',f2(c.params.p)+' bar'],['Tryck ut',f2(pg(c,'P'))+' bar'],['Flöde ut',fq(c.st.qs)]],
+  draw(x,c){stub(x,c,'P',0,-20);circ(x,0,0,20,C.panel);x.beginPath();x.moveTo(0,-13);x.lineTo(9,3);x.lineTo(-9,3);x.closePath();x.fillStyle=c.params.p>0.05?pcol(c.params.p):C.panel;x.fill();x.stroke();ln(x,-10,12,10,12);}},
+regulator:{name:'Tryckregulator',short:'REG',cat:'Försörjning',box:[-30,-30,36,30],ports:[P('IN',0,30,0,1),P('OUT',0,-30,0,-1)],
+  params:[sel('ctl','Styrning',[['manual','Manuellt: håll inställt tryck'],['auto','Automatiskt: håll en cylinders höjd']]),
+    sel('cyl','Cylinder att hålla',c=>[['','Välj cylinder'],...comps.filter(isCyl).map(k=>[String(k.id),k.label])]),
+    rng('target','Önskad höjd',0,100,1,'%'),rng('set','Inställt tryck',0,10,0.1,'bar'),rng('C','Flödeskapacitet',0.2,6,0.1,'NL/s/bar')],
+  def:{ctl:'manual',cyl:'',target:50,set:5,C:3},
+  tag:c=>c._cyl?'auto '+f1(c.st.set||0)+' bar':f1(c.params.set)+' bar',
+  edges(c){const i=c.pn.IN,o=c.pn.OUT,pi=pa(i),po=pa(o);const sp=c._cyl?autoSet(c):c.params.set;c.st.set=sp;const e=sp-(po-1);
+    c.st.q=flow(i,o,pi,po,c.params.C*clamp(e/0.25,0,1),1);flow(o,-1,po,1,c.params.C*clamp((-e-0.05)/0.25,0,1),1);},
+  info:c=>{const r=[['In',f2(pg(c,'IN'))+' bar'],['Ut',f2(pg(c,'OUT'))+' bar'],['Flöde',fq(c.st.qs)]];
+    if(c.params.ctl==='auto'){if(c._cyl){const y=c._cyl,G=y._g;r.unshift(['Räknat tryck',f2(c.st.set||0)+' bar']);r.push([y.label+' höjd',Math.round(G.L>0?100*y.st.x/G.L:0)+' % (mål '+Math.round(c.params.target)+' %)']);}else r.unshift(['Automatik','Välj en cylinder']);}
+    return r;},
+  draw(x,c){stub(x,c,'IN',0,18);stub(x,c,'OUT',0,-18);box(x,-18,-18,36,36,C.panel);arrowTo(x,-5,14,-5,-14);
+    x.setLineDash([3,3]);x.lineWidth=1.5;x.beginPath();x.moveTo(0,-24);x.lineTo(-26,-24);x.lineTo(-26,-6);x.lineTo(-18,-6);x.stroke();x.setLineDash([]);
+    x.lineWidth=1.5;zig(x,18,6,34,6,5,4);adj(x,20,17,34,-6);}},
+tank:{name:'Tryckkärl',short:'T',cat:'Försörjning',join:true,box:[-18,-40,18,40],ports:[P('T',0,-40,0,-1),P('B',0,40,0,1)],
+  params:[rng('vol','Volym',0.1,50,0.1,'L')],def:{vol:2},
+  tag:c=>f1(c.params.vol)+' L',
+  info:c=>[['Tryck',f2(pg(c,'T'))+' bar'],['Luftmängd',f1((pg(c,'T')+1)*c.params.vol)+' NL']],
+  draw(x,c){stub(x,c,'T',0,-30);stub(x,c,'B',0,30);x.beginPath();x.roundRect?x.roundRect(-16,-30,32,60,12):x.rect(-16,-30,32,60);x.fillStyle=C.panel;x.fill();
+    x.save();x.globalAlpha=0.35;x.fillStyle=pcol(pg(c,'T'));x.fill();x.restore();x.stroke();}},
+v32:{name:'3/2-ventil',short:'V',cat:'Ventiler',box:[-110,-24,92,24],lbox:[-30,-22,30,22],
+  ports:[P('A',0,-36,0,-1),P('P',-15,36,0,1),P('R',15,36,0,1,true)],
+  params:valveParams([]),def:{C:1.5,mode:'hold'},
+  tag:c=>c.params.mode==='hold'?'håll':'låsande',
+  edges:valveEdges,
+  info:c=>[['Läge',posNames.v32[c.st.pos]],['P',f2(pg(c,'P'))+' bar'],['A',f2(pg(c,'A'))+' bar']],
+  draw:drawValve},
+v52:{name:'5/2-ventil',short:'V',cat:'Ventiler',box:[-110,-24,92,24],lbox:[-30,-22,30,22],
+  ports:[P('A',-15,-36,0,-1),P('B',15,-36,0,-1),P('R',-20,36,0,1,true),P('P',0,36,0,1),P('S',20,36,0,1,true)],
+  params:valveParams([sel('auto','Växla själv i cylinderns ändlägen',c=>[['','Av'],...comps.filter(isCyl).map(k=>[String(k.id),k.label])])]),
+  def:{C:1.5,mode:'toggle',auto:''},
+  tag:c=>c.params.auto?'auto':'',
+  edges:valveEdges,
+  info:c=>[['Läge',posNames.v52[c.st.pos]],['P',f2(pg(c,'P'))+' bar'],['A',f2(pg(c,'A'))+' bar'],['B',f2(pg(c,'B'))+' bar']],
+  draw:drawValve},
+v53:{name:'5/3-ventil',short:'V',cat:'Ventiler',box:[-118,-24,118,24],lbox:[-30,-22,30,22],
+  ports:[P('A',-15,-36,0,-1),P('B',15,-36,0,-1),P('R',-20,36,0,1,true),P('P',0,36,0,1),P('S',20,36,0,1,true)],
+  params:valveParams([sel('center','Mittläge',[['closed','Stängt (låser cylindern)'],['exh','Avluftat (A och B till avlopp)']])]),
+  def:{C:1.5,mode:'toggle',center:'closed'},
+  edges:valveEdges,
+  info:c=>[['Läge',['Vänster · P→A, B→S',c.params.center==='exh'?'Mitt · avluftad':'Mitt · stängd','Höger · P→B, A→R'][c.st.pos]],['P',f2(pg(c,'P'))+' bar'],['A',f2(pg(c,'A'))+' bar'],['B',f2(pg(c,'B'))+' bar']],
+  draw:drawValve},
+shuttle:{name:'Växelventil (ELLER)',short:'EL',cat:'Ventiler',box:[-24,-26,24,26],ports:[P('X',-14,26,0,1),P('Y',14,26,0,1),P('A',0,-26,0,-1)],
+  params:[rng('C','Flödeskapacitet',0.1,4,0.1,'NL/s/bar')],def:{C:1.5},
+  edges(c){const X=c.pn.X,Y=c.pn.Y,A=c.pn.A,px=pa(X),py=pa(Y);c.st.sel=px>=py?0:1;c.st.q=px>=py?flow(X,A,px,pa(A),c.params.C,0):flow(Y,A,py,pa(A),c.params.C,0);},
+  info:c=>[['X',f2(pg(c,'X'))+' bar'],['Y',f2(pg(c,'Y'))+' bar'],['A',f2(pg(c,'A'))+' bar']],
+  draw(x,c){stub(x,c,'X',-14,14);stub(x,c,'Y',14,14);stub(x,c,'A',0,-14);box(x,-22,-14,44,28,C.panel);x.fillStyle=C.ink;x.font="700 15px 'Barlow Condensed',sans-serif";x.textAlign='center';x.textBaseline='middle';x.fillText('≥1',0,1);x.textAlign='left';x.textBaseline='alphabetic';}},
+andv:{name:'Tvåtrycksventil (OCH)',short:'OCH',cat:'Ventiler',box:[-24,-26,24,26],ports:[P('X',-14,26,0,1),P('Y',14,26,0,1),P('A',0,-26,0,-1)],
+  params:[rng('C','Flödeskapacitet',0.1,4,0.1,'NL/s/bar')],def:{C:1.5},
+  edges(c){const X=c.pn.X,Y=c.pn.Y,A=c.pn.A,px=pa(X),py=pa(Y);c.st.q=px<=py?flow(X,A,px,pa(A),c.params.C,0):flow(Y,A,py,pa(A),c.params.C,0);},
+  info:c=>[['X',f2(pg(c,'X'))+' bar'],['Y',f2(pg(c,'Y'))+' bar'],['A',f2(pg(c,'A'))+' bar']],
+  draw(x,c){stub(x,c,'X',-14,14);stub(x,c,'Y',14,14);stub(x,c,'A',0,-14);box(x,-22,-14,44,28,C.panel);x.fillStyle=C.ink;x.font="700 15px 'Barlow Condensed',sans-serif";x.textAlign='center';x.textBaseline='middle';x.fillText('&',0,1);x.textAlign='left';x.textBaseline='alphabetic';}},
+throttle:{name:'Strypventil',short:'S',cat:'Flödesstyrning',box:[-16,-26,16,26],ports:[P('1',0,26,0,1),P('2',0,-26,0,-1)],
+  params:[rng('open','Öppning',0,100,1,'%'),rng('C','Kapacitet helt öppen',0.1,5,0.1,'NL/s/bar')],def:{open:40,C:1},
+  tag:c=>Math.round(c.params.open)+' %',
+  edges(c){const a=c.pn['1'],b=c.pn['2'];c.st.q=flow(a,b,pa(a),pa(b),c.params.C*c.params.open/100,0);},
+  info:c=>[['Port 1',f2(pg(c,'1'))+' bar'],['Port 2',f2(pg(c,'2'))+' bar'],['Flöde',fq(Math.abs(c.st.qs))]],
+  draw(x,c){stub(x,c,'1',0,0);stub(x,c,'2',0,0);x.beginPath();x.moveTo(-10,-12);x.quadraticCurveTo(-1,0,-10,12);x.moveTo(10,-12);x.quadraticCurveTo(1,0,10,12);x.stroke();adj(x,-13,13,13,-13);}},
+tee:{name:'T-koppling',short:'TK',cat:'Slangkopplingar',join:true,box:[-24,-8,24,24],ports:[P('1',0,24,0,1),P('2',-24,0,-1,0),P('3',24,0,1,0)],
+  params:[],def:{},info:c=>[['Tryck',f2(pg(c,'1'))+' bar']],
+  draw(x,c){fitBody(x,[[0,24],[-24,0],[24,0]],pg(c,'1'));}},
+cross:{name:'Korskoppling',short:'KK',cat:'Slangkopplingar',join:true,box:[-24,-24,24,24],ports:[P('1',0,24,0,1),P('2',0,-24,0,-1),P('3',24,0,1,0),P('4',-24,0,-1,0)],
+  params:[],def:{},info:c=>[['Tryck',f2(pg(c,'1'))+' bar']],
+  draw(x,c){fitBody(x,[[0,24],[0,-24],[24,0],[-24,0]],pg(c,'1'));}},
+nipple:{name:'Skarvnippel',short:'SN',cat:'Slangkopplingar',join:true,box:[-9,-16,9,16],ports:[P('1',0,16,0,1),P('2',0,-16,0,-1)],
+  params:[],def:{},info:c=>[['Tryck',f2(pg(c,'1'))+' bar']],
+  draw(x,c){stub(x,c,'1',0,0);stub(x,c,'2',0,0);x.lineWidth=1.5;x.beginPath();for(let i=0;i<6;i++){const a=Math.PI/6+i*Math.PI/3;x[i?'lineTo':'moveTo'](Math.cos(a)*8,Math.sin(a)*8);}x.closePath();x.fillStyle=C.panel;x.fill();x.stroke();x.lineWidth=2;}},
+plug:{name:'Propp',short:'PR',cat:'Slangkopplingar',box:[-9,-14,9,7],ports:[P('P',0,-14,0,-1)],
+  params:[],def:{},info:c=>[['Tryck',f2(pg(c,'P'))+' bar']],
+  draw(x,c){stub(x,c,'P',0,-3);x.fillStyle=C.ink;x.fillRect(-8,-3,16,8);}},
+quick:{name:'Snabbkoppling',short:'SK',cat:'Slangkopplingar',box:[-14,-30,34,30],ports:[P('1',0,30,0,1),P('2',0,-30,0,-1)],
+  params:[sel('kind','Typ',[['seal','Säkerhetskoppling (tätar båda sidor)'],['open','Utan avstängning (blåser ut)']]),rng('C','Flödeskapacitet',0.1,5,0.1,'NL/s/bar')],def:{kind:'seal',C:2},
+  toggle:true,toggleLabel:c=>c.st.on?'Koppla isär':'Koppla ihop',acts:()=>[{side:'L',x:24,y:0}],
+  tag:c=>c.st.on?'ihop':'isär',
+  edges(c){const a=c.pn['1'],b=c.pn['2'],st=c.st;st.ex.a=0;st.ex.b=0;
+    if(st.on)st.q=flow(a,b,pa(a),pa(b),c.params.C,0);
+    else{st.q=0;if(c.params.kind==='open'){st.ex.a=flow(a,-1,pa(a),1,c.params.C*1.2,1);st.ex.b=flow(b,-1,pa(b),1,c.params.C*1.2,1);}}},
+  info:c=>[['Status',c.st.on?'Ihopkopplad':'Isärkopplad'],['Port 1',f2(pg(c,'1'))+' bar'],['Port 2',f2(pg(c,'2'))+' bar'],['Flöde',fq(Math.abs(c.st.qs))]],
+  draw(x,c){const on=c.st.on,gp=on?0:8,seal=c.params.kind==='seal';
+    stub(x,c,'1',0,15);stub(x,c,'2',0,-15-gp);
+    box(x,-9,1,18,14,C.panel);box(x,-7,-15-gp,14,14,C.panel);
+    if(on){x.lineWidth=3;x.strokeStyle=pcol(Math.max(pg(c,'1'),pg(c,'2')));ln(x,0,15,0,-15);x.lineWidth=2;x.strokeStyle=C.ink;}
+    else if(seal){circ(x,0,5,3.5,C.ink);circ(x,0,-5-gp,3.5,C.ink);}
+    else{puff(x,9,1,1,0,c.st.exs.a||0);puff(x,-9,1,-1,0,c.st.exs.a||0);puff(x,7,-1-gp,1,0,c.st.exs.b||0);puff(x,-7,-1-gp,-1,0,c.st.exs.b||0);}
+    ln(x,9,8,16,8);ln(x,16,8,16,0);x.beginPath();x.arc(24,0,8,0,7);x.fillStyle=on?C.panel:C.accent;x.fill();x.stroke();}},
+ball:{name:'Kulventil',short:'KV',cat:'Slangkopplingar',box:[-12,-26,34,26],ports:[P('1',0,26,0,1),P('2',0,-26,0,-1)],
+  params:[rng('C','Flödeskapacitet',0.1,8,0.1,'NL/s/bar'),zoneSel()],def:{C:3,zone:''},
+  toggle:true,toggleLabel:c=>c.st.on?'Stäng':'Öppna',acts:()=>[{side:'L',x:24,y:0}],
+  tag:c=>zoneOn(c)?'stängd av zon':c.st.on?'öppen':'stängd',
+  edges(c){const a=c.pn['1'],b=c.pn['2'];c.st.q=c.st.on&&!zoneOn(c)?flow(a,b,pa(a),pa(b),c.params.C,0):0;},
+  info:c=>[['Status',zoneOn(c)?'Stängd av '+c._zone.label:c.st.on?'Öppen':'Stängd'],['Port 1',f2(pg(c,'1'))+' bar'],['Port 2',f2(pg(c,'2'))+' bar'],['Flöde',fq(Math.abs(c.st.qs))]],
+  draw(x,c){const on=c.st.on&&!zoneOn(c);stub(x,c,'1',0,10);stub(x,c,'2',0,-10);
+    x.beginPath();x.moveTo(-8,-10);x.lineTo(8,-10);x.lineTo(0,0);x.closePath();x.moveTo(-8,10);x.lineTo(8,10);x.lineTo(0,0);x.closePath();
+    x.fillStyle=on?C.panel:C.ink;x.fill();x.stroke();
+    x.lineWidth=3;if(on)ln(x,3,0,16,0);else ln(x,3,0,13,-10);x.lineWidth=2;
+    x.beginPath();x.arc(24,0,8,0,7);x.fillStyle=on?C.panel:C.accent;x.fill();x.stroke();}},
+check:{name:'Backventil',short:'BV',cat:'Flödesstyrning',box:[-14,-26,14,26],ports:[P('IN',0,26,0,1),P('OUT',0,-26,0,-1)],
+  params:[rng('crack','Öppningstryck',0,2,0.05,'bar'),rng('C','Flödeskapacitet',0.1,5,0.1,'NL/s/bar')],def:{crack:0.1,C:2},
+  edges(c){const i=c.pn.IN,o=c.pn.OUT,pi=pa(i),po=pa(o);const k=clamp((pi-po-c.params.crack)/0.1,0,1);c.st.open=k;c.st.q=flow(i,o,pi,po,c.params.C*k,1);},
+  info:c=>[['In',f2(pg(c,'IN'))+' bar'],['Ut',f2(pg(c,'OUT'))+' bar'],['Status',c.st.open>0.02?'Öppen':'Stängd']],
+  draw(x,c){stub(x,c,'IN',0,8);stub(x,c,'OUT',0,-8);x.beginPath();x.moveTo(-10,-4);x.lineTo(0,8);x.lineTo(10,-4);x.stroke();circ(x,0,-3-5*(c.st.open||0),6,c.st.open>0.02?pcol(pg(c,'IN')):C.panel);}},
+flowctl:{name:'Strypbackventil',short:'SB',cat:'Flödesstyrning',box:[-24,-30,24,30],ports:[P('1',0,30,0,1),P('2',0,-30,0,-1)],
+  params:[rng('open','Öppning (2→1)',0,100,1,'%'),rng('C','Kapacitet',0.1,5,0.1,'NL/s/bar')],def:{open:40,C:1.5},
+  tag:c=>Math.round(c.params.open)+' %',
+  edges(c){const a=c.pn['1'],b=c.pn['2'],p1=pa(a),p2=pa(b);const q1=flow(a,b,p1,p2,c.params.C*c.params.open/100,0);const k=clamp((p1-p2-0.05)/0.1,0,1);c.st.open=k;c.st.q=q1+flow(a,b,p1,p2,c.params.C*k,1);},
+  info:c=>[['Port 1',f2(pg(c,'1'))+' bar'],['Port 2',f2(pg(c,'2'))+' bar'],['Flöde',fq(Math.abs(c.st.qs))],['Fritt flöde','1 → 2']],
+  draw(x,c){stub(x,c,'1',0,16);stub(x,c,'2',0,-16);x.setLineDash([4,3]);x.lineWidth=1;x.strokeRect(-22,-24,44,48);x.setLineDash([]);x.lineWidth=2;
+    ln(x,-10,-16,10,-16);ln(x,-10,16,10,16);ln(x,-10,-16,-10,16);
+    x.lineWidth=1.5;x.beginPath();x.moveTo(-16,-8);x.quadraticCurveTo(-11,0,-16,8);x.moveTo(-4,-8);x.quadraticCurveTo(-9,0,-4,8);x.stroke();x.lineWidth=2;adj(x,-19,10,-1,-10);
+    ln(x,10,16,10,6);x.beginPath();x.moveTo(4,-2);x.lineTo(10,6);x.lineTo(16,-2);x.stroke();ln(x,10,-9,10,-16);circ(x,10,-3-3*(c.st.open||0),4,c.st.open>0.02?pcol(pg(c,'1')):C.panel);}},
+qexh:{name:'Snabbavluftning',short:'SA',cat:'Flödesstyrning',box:[-18,-28,36,28],ports:[P('P',0,28,0,1),P('A',0,-28,0,-1)],
+  params:[rng('C','Flödeskapacitet',0.1,5,0.1,'NL/s/bar')],def:{C:2},
+  edges(c){const p=c.pn.P,a=c.pn.A,pp=pa(p),pA=pa(a),d=pp-pA;c.st.ex.X=0;
+    if(d>0.02){c.st.q=flow(p,a,pp,pA,c.params.C*clamp(d/0.1,0,1),1);}else{c.st.q=0;c.st.ex.X=flow(a,-1,pA,1,c.params.C*1.6*clamp((-d-0.05)/0.1,0,1),1);}},
+  info:c=>[['P',f2(pg(c,'P'))+' bar'],['A',f2(pg(c,'A'))+' bar'],['Avluftar',(c.st.exs.X||0)>0.08?'Ja':'Nej']],
+  draw(x,c){stub(x,c,'P',0,14);stub(x,c,'A',0,-14);box(x,-16,-14,32,28,C.panel);const ex=(c.st.exs.X||0)>0.08;
+    ln(x,0,14,0,4);circ(x,0,-1,5,C.panel);ln(x,0,-6,0,-14);x.strokeStyle=ex?C.accent:C.muted;arrowTo(x,4,-6,13,-6,5);x.strokeStyle=C.ink;
+    ln(x,16,0,22,0);exhTri(x,22,0,1,0);puff(x,31,0,1,0,c.st.exs.X||0);}},
+silencer:{name:'Ljuddämpare',short:'L',cat:'Flödesstyrning',box:[-14,-18,14,16],ports:[P('P',0,-18,0,-1)],
+  params:[rng('C','Flödeskapacitet',0.1,5,0.1,'NL/s/bar')],def:{C:2},
+  edges(c){const n=c.pn.P;c.st.q=flow(n,-1,pa(n),1,c.params.C,0);},
+  info:c=>[['Tryck',f2(pg(c,'P'))+' bar'],['Flöde ut',fq(c.st.qs)]],
+  draw(x,c){stub(x,c,'P',0,-8);x.beginPath();x.moveTo(0,-8);x.lineTo(12,4);x.lineTo(0,16);x.lineTo(-12,4);x.closePath();x.fillStyle=C.panel;x.fill();x.stroke();x.lineWidth=1.2;ln(x,-5,0,-5,8);ln(x,0,-2,0,10);ln(x,5,0,5,8);x.lineWidth=2;puff(x,0,16,0,1,c.st.qs);}},
+cylD:{name:'Dubbelverkande cylinder',short:'C',cat:'Cylindrar',box:[-82,-30,82,34],lbox:[-80,-28,80,28],ports:[P('A',-66,34,0,1),P('B',66,34,0,1)],
+  params:cylParams(false),def:{grav:'no',bore:32,rod:12,stroke:200,mass:5,fext:0,fric:20},
+  tag:c=>Math.round(c.st.x*1000)+' mm',info:cylInfo,draw:drawCyl},
+cylS:{name:'Enkelverkande cylinder',short:'C',cat:'Cylindrar',box:[-82,-36,82,34],lbox:[-80,-28,80,28],ports:[P('A',-66,34,0,1)],
+  params:cylParams(true),def:{grav:'no',bore:32,rod:12,stroke:100,mass:2,fext:0,s0:30,s1:70,fric:15},
+  tag:c=>Math.round(c.st.x*1000)+' mm',info:cylInfo,draw:drawCyl},
+relief:{name:'Säkerhetsventil',short:'SV',cat:'Skydd och mätning',box:[-30,-32,36,30],ports:[P('P',0,30,0,1)],
+  params:[rng('set','Öppningstryck',0.5,10,0.1,'bar'),rng('C','Avblåsningskapacitet',0.2,10,0.1,'NL/s/bar'),zoneSel()],def:{set:7,C:3,zone:''},
+  tag:c=>zoneOn(c)?'dumpar (zon)':'öppnar '+f1(c.params.set)+' bar',
+  edges(c){const n=c.pn.P,p=pa(n);const k=zoneOn(c)?1:clamp((p-1-c.params.set)/0.3,0,1);c.st.open=k;c.st.q=flow(n,-1,p,1,c.params.C*k,1);},
+  info:c=>[['Tryck',f2(pg(c,'P'))+' bar'],['Öppnar vid',f2(c.params.set)+' bar'],['Blåser av',fq(c.st.qs)],['Läge',zoneOn(c)?'Tvångsöppnad av '+c._zone.label:c.st.open>0.02?'Blåser av (övertryck)':'Stängd']],
+  draw(x,c){stub(x,c,'P',0,16);box(x,-16,-16,32,32,C.panel);const o=c.st.open||0;
+    x.strokeStyle=o>0.02?C.accent:C.ink;arrowTo(x,-7*(1-o),12,12,-7*(1-o));x.strokeStyle=C.ink;
+    ln(x,16,0,22,0);exhTri(x,22,0,1,0);puff(x,31,0,1,0,c.st.qs);
+    x.lineWidth=1.5;zig(x,0,-16,0,-30,5,4);adj(x,-9,-19,9,-29);
+    x.setLineDash([3,3]);x.beginPath();x.moveTo(0,23);x.lineTo(-24,23);x.lineTo(-24,0);x.lineTo(-16,0);x.stroke();x.setLineDash([]);x.lineWidth=2;
+    if(c.params.zone){x.fillStyle=zoneOn(c)?C.warn:C.panel;x.beginPath();x.moveTo(-30,-26);x.lineTo(-20,-26);x.lineTo(-25,-17);x.closePath();x.fill();x.lineWidth=1.2;x.stroke();x.lineWidth=2;}}},
+zone:{name:'Säkerhetszon',short:'ZON',cat:'Skydd och mätning',box:[-46,-26,46,26],ports:[],params:[],def:{},
+  toggle:true,toggleLabel:c=>c.st.on?'Gå in i zonen':'Lämna zonen',acts:()=>[{side:'L',x:30,y:0}],
+  tag:c=>c.st.on?'fri':'person i zonen',
+  info:c=>{const l=comps.filter(k=>k._zone===c).map(k=>k.label);return[['Status',c.st.on?'Zonen fri, maskinen får gå':'Person i zonen, säkert läge'],['Styr',l.length?l.join(', '):'Inget kopplat än']];},
+  draw(x,c){const on=c.st.on;x.fillStyle=on?C.panel:C.warn;x.fillRect(-44,-24,88,48);
+    x.save();x.beginPath();x.rect(-44,-24,88,48);x.rect(-38,-18,76,36);x.clip('evenodd');x.fillStyle=C.warn;x.fillRect(-44,-24,88,48);x.fillStyle=C.ink;
+    for(let i=-60;i<60;i+=10){x.beginPath();x.moveTo(i,-24);x.lineTo(i+5,-24);x.lineTo(i+5+48,24);x.lineTo(i+48,24);x.closePath();x.fill();}x.restore();
+    x.lineWidth=2;x.strokeStyle=C.ink;x.strokeRect(-44,-24,88,48);
+    x.fillStyle=on?C.ink:C.ink;x.beginPath();x.arc(-18,-6,4,0,7);x.fill();x.lineWidth=3;ln(x,-18,-1,-18,8);ln(x,-24,2,-12,2);ln(x,-18,8,-22,15);ln(x,-18,8,-14,15);x.lineWidth=2;
+    if(on){x.strokeStyle=C.muted;x.setLineDash([3,3]);ln(x,-2,-14,-2,14);x.setLineDash([]);}
+    x.beginPath();x.arc(30,0,9,0,7);x.fillStyle=on?C.panel:C.danger;x.fill();x.strokeStyle=C.ink;x.stroke();}},
+gauge:{name:'Manometer',short:'M',cat:'Skydd och mätning',box:[-20,-20,20,26],ports:[P('P',0,26,0,1)],
+  params:[rng('max','Skala',1,16,1,'bar')],def:{max:10},
+  tag:c=>f2(pg(c,'P'))+' bar',
+  info:c=>[['Tryck',f2(pg(c,'P'))+' bar']],
+  draw(x,c){stub(x,c,'P',0,18);circ(x,0,0,18,C.panel);const a0=Math.PI*0.75,a1=Math.PI*2.25;x.lineWidth=1.2;
+    for(let i=0;i<=5;i++){const a=a0+(a1-a0)*i/5;ln(x,Math.cos(a)*12,Math.sin(a)*12,Math.cos(a)*15,Math.sin(a)*15);}
+    const v=clamp(pg(c,'P')/c.params.max,0,1),a=a0+(a1-a0)*v;x.lineWidth=2;x.strokeStyle=C.accent;ln(x,0,0,Math.cos(a)*13,Math.sin(a)*13);x.fillStyle=C.ink;x.beginPath();x.arc(0,0,2.5,0,7);x.fill();x.strokeStyle=C.ink;}},
+};
+const CATS=[['Försörjning',['source','regulator','tank']],['Ventiler',['v32','v52','v53','shuttle','andv']],['Cylindrar',['cylD','cylS']],['Flödesstyrning',['throttle','check','flowctl','qexh','silencer']],['Skydd och mätning',['relief','gauge','zone']],['Slangkopplingar',['tee','cross','nipple','quick','ball','plug']]];
+
+/* ---------- geometri ---------- */
+function rotP(x,y,r){switch(r&3){case 0:return[x,y];case 1:return[-y,x];case 2:return[-x,-y];default:return[y,-x];}}
+function portWorld(c,pid){const p=portDef(c.type,pid);const[a,b]=rotP(p.x,p.y,c.rot);const[dx,dy]=rotP(p.dx,p.dy,c.rot);return{x:c.x+a,y:c.y+b,dx,dy};}
+function toLocal(c,w){return rotP(w.x-c.x,w.y-c.y,(4-c.rot)&3);}
+function wb(c,mode){const t=T[c.type];let[x0,y0,x1,y1]=mode==='label'&&t.lbox?t.lbox:t.box;if(mode==='fit'&&isCyl(c))x1+=(c.params.grav==='yes'?160:110);
+  let a=1e9,b=1e9,d=-1e9,e=-1e9;for(const[p,q]of[[x0,y0],[x1,y0],[x0,y1],[x1,y1]]){const[u,v]=rotP(p,q,c.rot);a=Math.min(a,u);b=Math.min(b,v);d=Math.max(d,u);e=Math.max(e,v);}return[a+c.x,b+c.y,d+c.x,e+c.y];}
+function hoseGeom(h){const A=portWorld(byId(h.a.c),h.a.p),B=portWorld(byId(h.b.c),h.b.p);const d=Math.hypot(B.x-A.x,B.y-A.y),k=clamp(d*0.45,18,90);return[A.x,A.y,A.x+A.dx*k,A.y+A.dy*k,B.x+B.dx*k,B.y+B.dy*k,B.x,B.y];}
+function hoseLen(h){const A=portWorld(byId(h.a.c),h.a.p),B=portWorld(byId(h.b.c),h.b.p);return Math.hypot(B.x-A.x,B.y-A.y)*1.2/200;}
+
+/* ---------- bygg nät ---------- */
+function build(){
+  reindex();
+  const par=new Map(),cnt=new Map();
+  const find=k=>{let r=k;while(par.get(r)!==r)r=par.get(r);while(par.get(k)!==r){const n=par.get(k);par.set(k,r);k=n;}return r;};
+  const uni=(a,b)=>{a=find(a);b=find(b);if(a!==b)par.set(a,b);};
+  for(const c of comps)for(const p of T[c.type].ports){const k=key(c.id,p.id);par.set(k,k);}
+  hoses=hoses.filter(h=>par.has(key(h.a.c,h.a.p))&&par.has(key(h.b.c,h.b.p)));
+  for(const h of hoses){const a=key(h.a.c,h.a.p),b=key(h.b.c,h.b.p);uni(a,b);cnt.set(a,(cnt.get(a)||0)+1);cnt.set(b,(cnt.get(b)||0)+1);}
+  for(const c of comps){const t=T[c.type];if(t.join){const ps=t.ports;for(let i=1;i<ps.length;i++)uni(key(c.id,ps[0].id),key(c.id,ps[i].id));}}
+  const ri=new Map();nets=[];
+  for(const c of comps){c.pn={};if(isCyl(c))c._g=geo(c);
+    if(c.type==='v52')c._auto=c.params.auto?comps.find(k=>String(k.id)===String(c.params.auto)&&isCyl(k))||null:null;
+    for(const p of T[c.type].ports){const k=key(c.id,p.id);
+      if(p.exh&&!cnt.get(k)){c.pn[p.id]=-1;continue;}
+      const r=find(k);let i=ri.get(r);if(i===undefined){i=nets.length;ri.set(r,i);nets.push({base:0.02,keys:[],cyl:[],n:0});}
+      c.pn[p.id]=i;nets[i].keys.push(k);nets[i].base+=PV;}}
+  for(const h of hoses){nets[byId(h.a.c).pn[h.a.p]].base+=0.028*Math.max(0.2,hoseLen(h));}
+  for(const c of comps){if(c.type==='tank')nets[c.pn.T].base+=c.params.vol;
+    if(c.type==='cylD'){nets[c.pn.A].cyl.push([c,0]);nets[c.pn.B].cyl.push([c,1]);}
+    if(c.type==='cylS')nets[c.pn.A].cyl.push([c,0]);}
+  for(const c of comps)if(c.type==='regulator'){c._cyl=c.params.ctl==='auto'?comps.find(k=>String(k.id)===String(c.params.cyl)&&isCyl(k))||null:null;c._side=c._cyl&&c._cyl.type==='cylD'?(c._cyl.pn.A===c._cyl.pn.B?'D':c.pn.OUT===c._cyl.pn.B?'B':'A'):'A';}
+  for(const c of comps)c._zone=c.params.zone?comps.find(k=>String(k.id)===String(c.params.zone)&&k.type==='zone')||null:null;
+  const N=nets.length;Vn=new Float64Array(N);Pn=new Float64Array(N);Dn=new Float64Array(N);
+  for(let i=0;i<N;i++){const nt=nets[i];let s=0;for(const k of nt.keys)s+=(portPg.get(k)||0);const p=Math.max(0.02,(nt.keys.length?s/nt.keys.length:0)+1);Vn[i]=netVol(i);Pn[i]=p;nt.n=p*Vn[i];}
+  dirty=false;
+}
+function netVol(i){const nt=nets[i];let v=nt.base;for(const[c,s]of nt.cyl)v+=cylV(c,s);return v;}
+
+function step(dt){
+  DT=dt;const N=nets.length;
+  for(let i=0;i<N;i++){Vn[i]=netVol(i);Pn[i]=nets[i].n/Vn[i];Dn[i]=0;}
+  for(const c of comps){const t=T[c.type];if(t.edges)t.edges(c);}
+  for(let i=0;i<N;i++){const nt=nets[i];nt.n=Math.max(1e-4*Vn[i],nt.n+Dn[i]);}
+  for(const c of comps){if(isCyl(c))cylDyn(c,dt);else if(c.type==='v52'&&c._auto)autoValve(c);}
+  simT+=dt;
+}
+function autoValve(c){const cy=c._auto,G=cy._g,f=G.L>0?cy.st.x/G.L:0;
+  if(f>=0.995&&c.st.last!=='out'){c.st.last='out';c.st.pos=1-c.st.pos;}
+  else if(f<=0.005&&c.st.last!=='in'){c.st.last='in';c.st.pos=1-c.st.pos;}}
+function initSt(c){const st={q:0,qs:0,open:0,ex:{},exs:{}};if(isValve(c)){st.pos=1;st.anim=1;st.last='';}if(isCyl(c)){st.x=0;st.v=0;st.Fp=0;st.F=0;}if(T[c.type].toggle)st.on=true;c.st=st;}
+
+/* ---------- manövrering ---------- */
+function actPress(c,side){if(T[c.type].toggle)return;if(c.params.mode==='hold'){c.st.pos=side==='R'?2:0;c.st.held=true;}}
+function actRelease(c,side){if(T[c.type].toggle){c.st.on=!c.st.on;return;}if(c.params.mode==='hold'){c.st.pos=1;c.st.held=false;}else{const t=side==='R'?2:0;c.st.pos=c.st.pos===t?1:t;}}
+function actCancel(c){if(T[c.type].toggle)return;if(c.params.mode==='hold'){c.st.pos=1;c.st.held=false;}}
+
+/* ---------- komponenter skapa / ta bort ---------- */
+function newComp(type,x,y,params={},rot=0){const t=T[type];let max=0;for(const c of comps)if(T[c.type].short===t.short){const n=parseInt(c.label.slice(t.short.length))||0;max=Math.max(max,n);}
+  const c={id:nextId++,type,x,y,rot,params:{...t.def,...params},label:t.short+(max+1)};initSt(c);return c;}
+function addComp(type){const w=toW(W/2,Math.max(80,(H-(sheetVisible()?sheetHeight():0))/2));let x=snap(w.x),y=snap(w.y);
+  while(comps.some(c=>Math.abs(c.x-x)<30&&Math.abs(c.y-y)<30))y+=50;
+  const c=newComp(type,x,y);comps.push(c);reindex();dirty=true;save();select({t:'c',id:c.id});}
+function delComp(c){comps=comps.filter(k=>k!==c);hoses=hoses.filter(h=>h.a.c!==c.id&&h.b.c!==c.id);for(const k of comps)if(k.params.auto===String(c.id))k.params.auto='';reindex();dirty=true;save();select(null);}
+function addHose(a,b){if(a.c===b.c&&a.p===b.p)return;if(hoses.some(h=>(h.a.c===a.c&&h.a.p===a.p&&h.b.c===b.c&&h.b.p===b.p)||(h.a.c===b.c&&h.a.p===b.p&&h.b.c===a.c&&h.b.p===a.p))){flash('Den slangen finns redan');return;}
+  hoses.push({id:nextId++,a:{c:a.c,p:a.p},b:{c:b.c,p:b.p}});dirty=true;save();flash('Slang kopplad');}
+const snap=v=>Math.round(v/10)*10;
+
+/* ---------- spara ---------- */
+let saveT=0;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify({v:1,nextId,comps:comps.map(c=>({id:c.id,type:c.type,x:c.x,y:c.y,rot:c.rot,params:c.params,label:c.label})),hoses}));}catch(_){}},400);}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s||s.v!==1||!Array.isArray(s.comps))return false;
+  comps=s.comps.filter(c=>T[c.type]).map(c=>{const k={...c,params:{...T[c.type].def,...c.params}};initSt(k);return k;});hoses=(s.hoses||[]).filter(h=>h&&h.a&&h.b);nextId=s.nextId||1;
+  for(const c of comps)nextId=Math.max(nextId,c.id+1);for(const h of hoses)nextId=Math.max(nextId,h.id+1);reindex();return true;}catch(_){return false;}}
+
+/* ---------- exempel ---------- */
+let exList=[];
+const EX=[
+ {name:'Pendlande cylinder',desc:'5/2-ventilen växlar själv i ändlägena. Kulventilen KV1 är huvudventil. Strypbackventilerna stryper frånluften och styr hastigheten åt båda håll.',build(A,L){
+  const c1=A('cylD',0,-250,{bore:32,rod:12,stroke:200,mass:5});const sb1=A('flowctl',-66,-140,{open:30}),sb2=A('flowctl',66,-140,{open:30});
+  const v1=A('v52',0,-20,{auto:String(c1.id)});const reg=A('regulator',0,90,{set:5});const k=A('source',0,240,{p:6});const sv=A('relief',-90,170,{set:7.5});const kv=A('ball',0,165);
+  const m1=A('gauge',80,40),m2=A('gauge',-150,-150);
+  L(sb1,'2',c1,'A');L(sb2,'2',c1,'B');L(v1,'A',sb1,'1');L(v1,'B',sb2,'1');L(reg,'OUT',v1,'P');L(k,'P',kv,'1');L(kv,'2',reg,'IN');L(sv,'P',k,'P');L(m1,'P',reg,'OUT');L(m2,'P',c1,'A');}},
+ {name:'Enkelverkande med knapp',desc:'Håll inne 3/2-ventilens runda knapp. När du släpper luftas cylindern genom ljuddämparen och fjädern drar tillbaka kolven.',build(A,L){
+  const c1=A('cylS',66,-230,{bore:40,rod:12,stroke:100,mass:2,s0:30,s1:80,fric:15});const sb=A('flowctl',0,-120,{open:45});const v1=A('v32',0,0,{mode:'hold'});
+  const l1=A('silencer',15,80);const reg=A('regulator',-60,120,{set:4});const k=A('source',-60,250,{p:6});const m1=A('gauge',-150,40);
+  L(sb,'2',c1,'A');L(v1,'A',sb,'1');L(v1,'R',l1,'P');L(reg,'OUT',v1,'P');L(k,'P',reg,'IN');L(m1,'P',reg,'OUT');}},
+ {name:'Tryckkärl och 5/3-ventil',desc:'Backventilen fyller kärlet, säkerhetsventilen håller det under 5,5 bar. Tryck på 5/3-ventilens knappar; mittläget låser lasten mitt i slaget.',build(A,L){
+  const c1=A('cylD',0,-270,{bore:50,rod:20,stroke:300,mass:40,fext:200,fric:40});const v1=A('v53',0,-110,{C:0.5,mode:'toggle'});const t1=A('tank',0,20,{vol:5});
+  const m1=A('gauge',90,0);const sv=A('relief',-90,60,{set:5.5,C:2});const b1=A('check',0,140);const k=A('source',0,260,{p:7,cap:0.8});const m2=A('gauge',90,200);
+  L(v1,'A',c1,'A');L(v1,'B',c1,'B');L(t1,'T',v1,'P');L(m1,'P',t1,'T');L(sv,'P',t1,'B');L(b1,'OUT',t1,'B');L(k,'P',b1,'IN');L(m2,'P',k,'P');}},
+ {name:'Luftfjäder med vikt',graph:true,desc:'En stående cylinder bär 50 kg på en luftkudde: kolvens undersida plus kärlet T1. Regulatorn står på automatik och räknar om trycket så kolven stannar på önskad höjd när du ändrar kolvdiameter, vikt, slag eller kärl. Knuffa lasten så fjädrar den. Strypningen S1 avgör hur snabbt regulatorn hinner rätta till: mindre öppning ger mer fjäder men långsammare justering. Stäng KV1 för en ren luftfjäder, eller byt regulatorn till manuellt tryck.',build(A,L){
+  const c1=A('cylD',0,-60,{grav:'yes',bore:63,rod:20,stroke:300,mass:50,fric:15},3);const l1=A('silencer',70,-126,{},3);const t2=A('tank',110,50,{vol:0.5});
+  const s1=A('throttle',110,150,{open:100,C:2});const kv=A('ball',110,230);const reg=A('regulator',110,320,{set:1.6,ctl:'auto',cyl:String(c1.id),target:50});const k=A('source',110,420,{p:6});const m1=A('gauge',210,40);
+  L(c1,'B',l1,'P');L(c1,'A',t2,'T');L(t2,'B',s1,'2');L(s1,'1',kv,'2');L(kv,'1',reg,'OUT');L(reg,'IN',k,'P');L(m1,'P',t2,'B');}},
+ {name:'T-koppling till båda sidor + säkerhetszon',graph:true,desc:'Matningen delas i en T-koppling till båda sidor av cylindern (differentialkoppling). Samma tryck på båda sidor ger kraft bara på stångens area, så det krävs mer tryck men kolven bär lasten mjukt. Tryck på zonknappen: kulventilen stänger och säkerhetsventilerna tömmer luften så lasten sänks långsamt.',build(A,L){
+  const c1=A('cylD',0,-60,{grav:'yes',bore:63,rod:40,stroke:300,mass:30,fric:15},3);const tk=A('tee',150,-60,{},3);
+  const sv1=A('relief',90,-200,{set:5.5,C:0.1}),sv2=A('relief',90,90,{set:5.5,C:0.1});const m1=A('gauge',230,-150);
+  const kv=A('ball',260,40);const reg=A('regulator',260,150,{ctl:'auto',cyl:String(c1.id),target:50,set:2.5});const k=A('source',260,260,{p:6});
+  const z=A('zone',-140,170);sv1.params.zone=sv2.params.zone=kv.params.zone=String(z.id);
+  L(tk,'3',c1,'B');L(tk,'2',c1,'A');L(sv1,'P',c1,'B');L(sv2,'P',c1,'A');L(m1,'P',tk,'1');L(tk,'1',kv,'2');L(kv,'1',reg,'OUT');L(reg,'IN',k,'P');}},
+ {name:'Tvåhandsmanöver',desc:'Tvåtrycksventilen (OCH) släpper bara fram luft när båda 3/2-ventilerna hålls inne samtidigt. Använd två fingrar.',build(A,L){
+  const c1=A('cylS',66,-260,{bore:32,rod:12,stroke:80,mass:1,s0:20,s1:50});const o1=A('andv',0,-150);const m1=A('gauge',110,-140);
+  const v1=A('v32',-120,-10,{mode:'hold'}),v2=A('v32',120,-10,{mode:'hold'});const reg=A('regulator',0,110,{set:5});const k=A('source',0,240);const tk=A('tee',0,40);
+  L(o1,'A',c1,'A');L(m1,'P',o1,'A');L(v1,'A',o1,'X');L(v2,'A',o1,'Y');L(reg,'OUT',tk,'1');L(tk,'2',v1,'P');L(tk,'3',v2,'P');L(k,'P',reg,'IN');}},
+];
+function loadExample(ex){comps=[];hoses=[];nextId=1;portPg.clear();simT=0;
+  const A=(type,x,y,params,rot)=>{const c=newComp(type,x,y,params,rot);comps.push(c);return c;};
+  const L=(c1,p1,c2,p2)=>hoses.push({id:nextId++,a:{c:c1.id,p:p1},b:{c:c2.id,p:p2}});
+  if(ex)ex.build(A,L);if(ex&&ex.graph&&!graphOpen){graphOpen=true;$('#graph').hidden=false;$('#graphBtn').setAttribute('aria-pressed','true');}reindex();dirty=true;clearGraph();select(null);fit();save();}
+function resetSim(){portPg.clear();for(const c of comps)initSt(c);simT=0;dirty=true;clearGraph();}
+
+/* ---------- vy ---------- */
+const toW=(sx,sy)=>({x:(sx-view.ox)/view.z,y:(sy-view.oy)/view.z});
+function fit(){if(!W)return;viewTarget=null;if(!comps.length){view.z=1;view.ox=W/2;view.oy=H/2;return;}
+  let a=1e9,b=1e9,d=-1e9,e=-1e9;for(const c of comps){const r=wb(c,'fit');a=Math.min(a,r[0]);b=Math.min(b,r[1]-18);d=Math.max(d,r[2]);e=Math.max(e,r[3]);}
+  const pad=28,top=graphOpen?190:0;const z=clamp(Math.min((W-pad*2)/(d-a),(H-top-pad*2)/(e-b)),0.3,1.8);view.z=z;view.ox=W/2-(a+d)/2*z;view.oy=top+(H-top)/2-(b+e)/2*z;}
+function resize(){const r=stage.getBoundingClientRect();const first=!W;W=r.width;H=r.height;DPR=Math.max(1,window.devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);if(first)fit();}
+new ResizeObserver(resize).observe(stage);
+
+/* ---------- träffytor ---------- */
+function hitAct(w){const r=Math.max(16,22/view.z);for(let i=comps.length-1;i>=0;i--){const c=comps[i];const t=T[c.type];if(!isValve(c)&&!t.acts)continue;const[lx,ly]=toLocal(c,w);for(const a of(isValve(c)?actPos(c):t.acts(c)))if(Math.hypot(lx-a.x,ly-a.y)<r)return{c,side:a.side};}return null;}
+function hitPort(w){const r=Math.max(9,20/view.z);let best=null,bd=r;for(const c of comps)for(const p of T[c.type].ports){const q=portWorld(c,p.id);const d=Math.hypot(q.x-w.x,q.y-w.y);if(d<bd){bd=d;best={c:c.id,p:p.id};}}return best;}
+function hitComp(w){for(let i=comps.length-1;i>=0;i--){const c=comps[i];const[lx,ly]=toLocal(c,w);const b=T[c.type].box;if(lx>=b[0]-4&&lx<=b[2]+4&&ly>=b[1]-4&&ly<=b[3]+4)return c;}return null;}
+function bez(G,t){const u=1-t;return[u*u*u*G[0]+3*u*u*t*G[2]+3*u*t*t*G[4]+t*t*t*G[6],u*u*u*G[1]+3*u*u*t*G[3]+3*u*t*t*G[5]+t*t*t*G[7]];}
+function hitHose(w){const r=12/view.z;let best=null,bd=r;for(const h of hoses){const G=hoseGeom(h);let p=bez(G,0);for(let i=1;i<=20;i++){const q=bez(G,i/20);const d=segD(w.x,w.y,p[0],p[1],q[0],q[1]);if(d<bd){bd=d;best=h;}p=q;}}return best;}
+function segD(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy||1;const t=clamp(((px-ax)*dx+(py-ay)*dy)/l,0,1);return Math.hypot(px-ax-dx*t,py-ay-dy*t);}
+
+/* ---------- rendering ---------- */
+let selS=null,connectFrom=null,rubber=null;
+function render(){
+  g.setTransform(DPR,0,0,DPR,0,0);g.fillStyle=C.bg;g.fillRect(0,0,W,H);
+  let s=20*view.z;let major=5;if(s<9){s*=5;major=4;}
+  const ox=((view.ox%s)+s)%s,oy=((view.oy%s)+s)%s;
+  const mi=Math.round((view.ox-ox)/s),mj=Math.round((view.oy-oy)/s);
+  g.lineWidth=1;
+  for(let i=0,x=ox;x<W;x+=s,i++){g.strokeStyle=((i-mi)%major===0)?C.grid2:C.grid;g.beginPath();g.moveTo(Math.round(x)+0.5,0);g.lineTo(Math.round(x)+0.5,H);g.stroke();}
+  for(let j=0,y=oy;y<H;y+=s,j++){g.strokeStyle=((j-mj)%major===0)?C.grid2:C.grid;g.beginPath();g.moveTo(0,Math.round(y)+0.5);g.lineTo(W,Math.round(y)+0.5);g.stroke();}
+  g.setTransform(DPR*view.z,0,0,DPR*view.z,DPR*view.ox,DPR*view.oy);g.lineCap='round';g.lineJoin='round';
+  for(const h of hoses){const G=hoseGeom(h);const p=pg(byId(h.a.c),h.a.p);
+    g.beginPath();g.moveTo(G[0],G[1]);g.bezierCurveTo(G[2],G[3],G[4],G[5],G[6],G[7]);
+    g.strokeStyle=C.bg;g.lineWidth=7;g.stroke();g.strokeStyle=pcol(p);g.lineWidth=3.5;g.stroke();
+    if(selS&&selS.t==='h'&&selS.id===h.id){g.setLineDash([6,5]);g.strokeStyle=C.accent;g.lineWidth=2;g.stroke();g.setLineDash([]);}}
+  g.lineCap='butt';
+  for(const c of comps)if(c._zone){g.save();g.setLineDash([2,5]);g.strokeStyle=zoneOn(c)?C.danger:C.warn;g.globalAlpha=0.8;g.lineWidth=1.5;ln(g,c._zone.x,c._zone.y,c.x,c.y);g.restore();}
+  for(const c of comps){g.save();g.translate(c.x,c.y);g.rotate(c.rot*Math.PI/2);g.lineWidth=2;g.strokeStyle=C.ink;T[c.type].draw(g,c);g.restore();}
+  const big=!!(connectFrom||rubber);
+  for(const c of comps)for(const p of T[c.type].ports){if(p.exh&&c.pn&&c.pn[p.id]===-1&&!big)continue;const q=portWorld(c,p.id);
+    const isFrom=(connectFrom&&connectFrom.c===c.id&&connectFrom.p===p.id)||(rubber&&rubber.from.c===c.id&&rubber.from.p===p.id);
+    const isOver=rubber&&rubber.over&&rubber.over.c===c.id&&rubber.over.p===p.id;
+    const r=(big?5.5:3.5)/Math.max(0.6,Math.min(1.4,view.z));g.beginPath();g.arc(q.x,q.y,r,0,Math.PI*2);g.fillStyle=pcol(pg(c,p.id));g.fill();
+    if(isFrom||isOver){g.strokeStyle=C.accent;g.lineWidth=2.5;g.beginPath();g.arc(q.x,q.y,r+4,0,Math.PI*2);g.stroke();}}
+  if(rubber){const q=portWorld(byId(rubber.from.c),rubber.from.p);g.setLineDash([5,5]);g.strokeStyle=C.accent;g.lineWidth=2;ln(g,q.x,q.y,rubber.x,rubber.y);g.setLineDash([]);}
+  if(selS&&selS.t==='c'){const c=byId(selS.id);if(c){const b=wb(c);g.setLineDash([5,4]);g.strokeStyle=C.accent;g.lineWidth=1.5/view.z*1.2;g.strokeRect(b[0]-6,b[1]-6,b[2]-b[0]+12,b[3]-b[1]+12);g.setLineDash([]);}}
+  g.setTransform(DPR,0,0,DPR,0,0);g.lineJoin='round';
+  for(const c of comps){const b=wb(c,'label');const sx=b[0]*view.z+view.ox,sy=b[1]*view.z+view.oy-7;if(sx>W||sy<-10||sy>H+20)continue;
+    g.font=F_LBL;g.strokeStyle=C.bg;g.lineWidth=4;g.strokeText(c.label,sx,sy);g.fillStyle=C.ink;g.fillText(c.label,sx,sy);
+    const tg=T[c.type].tag?T[c.type].tag(c):'';if(tg){const w=g.measureText(c.label).width;g.font=F_MONO;g.strokeText(tg,sx+w+6,sy);g.fillStyle=C.muted;g.fillText(tg,sx+w+6,sy);}}
+  if(view.z>=0.85||big){g.font="600 10px 'Barlow Condensed',sans-serif";g.textAlign='center';g.textBaseline='middle';
+    for(const c of comps)for(const p of T[c.type].ports){if(T[c.type].ports.length<2&&!big)continue;const q=portWorld(c,p.id);
+      const tx=q.x*view.z+view.ox+(q.dx===0?9:0),ty=q.y*view.z+view.oy+(q.dx!==0?-9:0);
+      g.strokeStyle=C.bg;g.lineWidth=3;g.strokeText(p.id,tx,ty);g.fillStyle=C.muted;g.fillText(p.id,tx,ty);}
+    g.textAlign='left';g.textBaseline='alphabetic';}
+  if(!comps.length){g.textAlign='center';g.fillStyle=C.ink;g.font="700 22px 'Barlow Condensed',sans-serif";g.fillText('Tomt kretsschema',W/2,H/2-8);
+    g.font="400 14px 'Barlow',sans-serif";g.fillStyle=C.muted;g.fillText('Tryck på Komponent för att lägga till delar,',W/2,H/2+16);g.fillText('eller välj ett färdigt exempel.',W/2,H/2+34);g.textAlign='left';}
+}
+
+/* ---------- graf ---------- */
+const series=new Map();let lastSample=-1,graphOpen=false;
+function clearGraph(){series.clear();lastSample=-1;}
+function sampleGraph(){if(simT-lastSample<0.02)return;lastSample=simT;
+  for(const c of comps){let v,u;if(c.type==='gauge'){v=pg(c,'P');u='bar';}else if(isCyl(c)){v=c._g&&c._g.L>0?100*c.st.x/c._g.L:0;u='%';}else continue;
+    let s=series.get(c.id);if(!s){s={pts:[]};series.set(c.id,s);}s.c=c;s.u=u;s.pts.push(simT,v);while(s.pts.length>2&&s.pts[0]<simT-10){s.pts.shift();s.pts.shift();}}
+  for(const id of series.keys())if(!idMap.has(id))series.delete(id);}
+function drawGraph(){const r=gcv.getBoundingClientRect();const w=r.width,h=r.height;if(w<10||h<10)return;
+  if(gcv.width!==Math.round(w*DPR)||gcv.height!==Math.round(h*DPR)){gcv.width=Math.round(w*DPR);gcv.height=Math.round(h*DPR);}
+  const x=gx;x.setTransform(DPR,0,0,DPR,0,0);x.clearRect(0,0,w,h);
+  const l=30,rr=34,t=8,b=18,pw=w-l-rr,ph=h-t-b;const t1=Math.max(simT,8),t0=t1-8;
+  let pmax=8;for(const s of series.values())if(s.u==='bar')for(let i=1;i<s.pts.length;i+=2)if(s.pts[i]>pmax)pmax=Math.ceil(s.pts[i]);if(pmax%2)pmax++;
+  x.font="500 10px 'IBM Plex Mono',monospace";x.lineWidth=1;x.textBaseline='middle';
+  for(let p=0;p<=pmax;p+=2){const y=t+ph*(1-p/pmax);x.strokeStyle=C.grid2;ln(x,l,Math.round(y)+0.5,l+pw,Math.round(y)+0.5);x.fillStyle=C.muted;x.textAlign='right';x.fillText(String(p),l-5,y);}
+  x.textAlign='left';for(const p of[0,50,100]){const y=t+ph*(1-p/100);x.fillStyle=C.muted;x.fillText(p+'%',l+pw+5,y);}
+  x.textBaseline='alphabetic';x.textAlign='center';for(let s=Math.ceil(t0/2)*2;s<=t1;s+=2){const xx=l+pw*(s-t0)/8;x.fillStyle=C.muted;x.fillText(s+' s',xx,h-4);}
+  x.textAlign='left';x.fillText('bar',2,t+4);
+  let i=0;for(const s of series.values()){const col=C['s'+(i%5+1)];i++;x.strokeStyle=col;x.lineWidth=2;x.setLineDash(s.u==='%'?[5,3]:[]);x.beginPath();let st=false;
+    for(let k=0;k<s.pts.length;k+=2){const tt=s.pts[k];if(tt<t0)continue;const v=s.pts[k+1];const xx=l+pw*(tt-t0)/8,yy=t+ph*(1-clamp(s.u==='%'?v/100:v/pmax,-0.05,1.05));if(!st){x.moveTo(xx,yy);st=true;}else x.lineTo(xx,yy);}x.stroke();}
+  x.setLineDash([]);
+  if(!series.size){x.fillStyle=C.muted;x.font="400 13px 'Barlow',sans-serif";x.textAlign='center';x.fillText('Lägg till en manometer eller cylinder för att få kurvor.',l+pw/2,t+ph/2);x.textAlign='left';}}
+function updateLegend(){if(!graphOpen)return;let i=0,html='';for(const s of series.values()){const v=s.pts.length?s.pts[s.pts.length-1]:0;html+=`<span class="lg"><i class="k${i%5}"></i>${esc(s.c.label)} <b>${s.u==='%'?Math.round(v)+' %':f2(v)+' bar'}</b></span>`;i++;}$('#legend').innerHTML=html||'<span class="lg">Inga mätpunkter</span>';}
+
+/* ---------- pekare ---------- */
+const ptrs=new Map();let pinch=null;
+function sxy(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+function pinchPair(){return[...ptrs.values()].filter(p=>p.kind==='pinch').slice(0,2);}
+function startPinch(){const[a,b]=pinchPair();if(!b)return;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;pinch={d0:Math.hypot(a.x-b.x,a.y-b.y)||1,z0:view.z,w:toW(mx,my)};}
+cv.addEventListener('pointerdown',e=>{
+  viewTarget=null;const s=sxy(e);const pt={x:s.x,y:s.y,sx:s.x,sy:s.y,moved:false,kind:'none',vx:view.ox,vy:view.oy};
+  try{cv.setPointerCapture(e.pointerId);}catch(_){}
+  ptrs.set(e.pointerId,pt);const w=toW(s.x,s.y);
+  const act=hitAct(w);if(act){pt.kind='act';pt.act=act;actPress(act.c,act.side);return;}
+  const others=[...ptrs.values()].filter(p=>p!==pt&&p.kind!=='act'&&p.kind!=='none');
+  if(others.length){rubber=null;others[0].kind='pinch';pt.kind='pinch';startPinch();return;}
+  const port=hitPort(w);if(port){pt.kind='port';pt.port=port;return;}
+  const c=hitComp(w);if(c){pt.kind='drag';pt.comp=c;pt.off={x:c.x-w.x,y:c.y-w.y};return;}
+  const h=hitHose(w);if(h){pt.kind='hose';pt.hose=h;return;}
+  pt.kind='pan';
+});
+cv.addEventListener('pointermove',e=>{const pt=ptrs.get(e.pointerId);if(!pt)return;const s=sxy(e);pt.x=s.x;pt.y=s.y;
+  if(!pt.moved&&Math.hypot(pt.x-pt.sx,pt.y-pt.sy)>7)pt.moved=true;
+  if(pt.kind==='pinch'&&pinch){const[a,b]=pinchPair();if(!b)return;const d=Math.hypot(a.x-b.x,a.y-b.y);const z=clamp(pinch.z0*d/pinch.d0,0.25,4);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;view.z=z;view.ox=mx-pinch.w.x*z;view.oy=my-pinch.w.y*z;}
+  else if(pt.kind==='hose'&&pt.moved)pt.kind='pan';
+  if(pt.kind==='pan'){view.ox=pt.vx+(pt.x-pt.sx);view.oy=pt.vy+(pt.y-pt.sy);}
+  else if(pt.kind==='drag'&&pt.moved){const w=toW(pt.x,pt.y);const nx=snap(w.x+pt.off.x),ny=snap(w.y+pt.off.y);if(nx!==pt.comp.x||ny!==pt.comp.y){pt.comp.x=nx;pt.comp.y=ny;dirty=true;}}
+  else if(pt.kind==='port'&&pt.moved){const w=toW(pt.x,pt.y);const o=hitPort(w);rubber={from:pt.port,x:w.x,y:w.y,over:o&&!(o.c===pt.port.c&&o.p===pt.port.p)?o:null};}
+});
+function endPtr(e,cancel){const pt=ptrs.get(e.pointerId);ptrs.delete(e.pointerId);if(!pt)return;
+  if(pt.kind==='act'){cancel?actCancel(pt.act.c):actRelease(pt.act.c,pt.act.side);return;}
+  if(pt.kind==='pinch'){pinch=null;for(const p of ptrs.values())if(p.kind==='pinch')p.kind='none';return;}
+  if(cancel){rubber=null;return;}
+  if(pt.kind==='port'){if(pt.moved){const tgt=rubber&&rubber.over;rubber=null;if(tgt){addHose(pt.port,tgt);cancelConnect();}}else portTap(pt.port);}
+  else if(pt.kind==='drag'){if(!pt.moved){cancelConnect();select({t:'c',id:pt.comp.id});}else save();}
+  else if(pt.kind==='hose'){cancelConnect();select({t:'h',id:pt.hose.id});}
+  else if(pt.kind==='pan'&&!pt.moved){cancelConnect();select(null);closeAll();}
+}
+cv.addEventListener('pointerup',e=>endPtr(e,false));
+cv.addEventListener('pointercancel',e=>endPtr(e,true));
+cv.addEventListener('wheel',e=>{e.preventDefault();viewTarget=null;const s=sxy(e);const w=toW(s.x,s.y);const z=clamp(view.z*Math.exp(-e.deltaY*0.0015),0.25,4);view.z=z;view.ox=s.x-w.x*z;view.oy=s.y-w.y*z;},{passive:false});
+function portTap(port){if(!connectFrom){connectFrom=port;closeAll();select(null,true);hint('Tryck på porten slangen ska gå till',true);}
+  else if(connectFrom.c===port.c&&connectFrom.p===port.p)cancelConnect();
+  else{addHose(connectFrom,port);connectFrom=null;}}
+function cancelConnect(){if(connectFrom){connectFrom=null;hideHint();}}
+document.addEventListener('keydown',e=>{if(e.target.closest&&e.target.closest('input,select,textarea'))return;
+  if((e.key==='Delete'||e.key==='Backspace')&&selS){e.preventDefault();if(selS.t==='c'){const c=byId(selS.id);if(c)delComp(c);}else{hoses=hoses.filter(h=>h.id!==selS.id);dirty=true;save();select(null);}}
+  if(e.key==='Escape'){cancelConnect();select(null);closeAll();}
+  if(e.key===' '&&!e.repeat){e.preventDefault();togglePlay();}});
+
+/* ---------- tips ---------- */
+const hintEl=$('#hint'),hintText=$('#hintText'),hintBtn=$('#hintBtn');let hintT=0;
+function hint(t,cancelable){clearTimeout(hintT);hintText.textContent=t;hintBtn.hidden=!cancelable;hintEl.hidden=false;}
+function hideHint(){hintEl.hidden=true;}
+function flash(t){hint(t,false);hintT=setTimeout(hideHint,1300);}
+hintBtn.addEventListener('click',()=>{cancelConnect();rubber=null;});
+
+/* ---------- ark ---------- */
+const sheet=$('#sheet'),palette=$('#palette'),examples=$('#examples');let sheetMin=false;
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function sheetVisible(){return!sheet.hidden||!palette.hidden||!examples.hidden;}
+function sheetHeight(){for(const s of[sheet,palette,examples])if(!s.hidden)return s.getBoundingClientRect().height;return 0;}
+function closeAll(keepSel){sheet.hidden=true;palette.hidden=true;examples.hidden=true;$('#addBtn').setAttribute('aria-pressed','false');$('#exBtn').setAttribute('aria-pressed','false');if(!keepSel)selS=null;}
+function select(s,silent){selS=s;if(!s){sheet.hidden=true;return;}if(silent)return;
+  if(s.t==='c'){const c=byId(s.id);if(c)openComp(c);}else{const h=hoses.find(k=>k.id===s.id);if(h)openHose(h);}}
+function keepVisible(wx,wy){requestAnimationFrame(()=>{const sh=sheetHeight();const sy=wy*view.z+view.oy;const sx=wx*view.z+view.ox;const lim=H-sh-50;let ty=view.oy,tx=view.ox;
+  if(sy>lim||sy<40)ty=view.oy+((H-sh)/2-sy);if(W>=720&&sx>W-420)tx=view.ox+((W-420)/2-sx);if(ty!==view.oy||tx!==view.ox)viewTarget={ox:tx,oy:ty};});}
+function head(eyebrow,title,sub){return`<div class="grab" aria-hidden="true"></div><div class="sh-head"><div class="ttl"><div class="eyebrow">${eyebrow}</div><h2>${title} ${sub?`<span>${sub}</span>`:''}</h2></div>
+  <button class="btn icon" data-min aria-label="Minimera">${sheetMin?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 15l6-6 6 6"/></svg>':'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>'}</button>
+  <button class="btn icon" data-close aria-label="Stäng"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;}
+function wireHead(el,reopen){el.querySelector('[data-close]').onclick=()=>{select(null);closeAll();};const m=el.querySelector('[data-min]');if(m)m.onclick=()=>{sheetMin=!sheetMin;reopen();};}
+let roComp=null;
+function openComp(c){palette.hidden=true;examples.hidden=true;$('#addBtn').setAttribute('aria-pressed','false');$('#exBtn').setAttribute('aria-pressed','false');
+  const t=T[c.type];roComp=c;sheet.className='sheet band'+(sheetMin?' min':'');
+  sheet.innerHTML=head(t.cat,esc(c.label),t.name)+`<dl class="ro" id="ro"></dl><div class="act" id="actBox"></div><div class="params" id="prm"></div>
+   <div class="foot"><button class="btn" id="rotBtn" type="button">Rotera 90°</button><button class="btn danger" id="delBtn" type="button">Ta bort</button></div>`;
+  wireHead(sheet,()=>openComp(c));
+  const pb=sheet.querySelector('#prm');
+  for(const p of t.params){const id=`p${c.id}-${p.k}`;const row=document.createElement('div');row.className='prm';
+    if(p.t==='range'){row.innerHTML=`<label for="${id}">${p.label}</label><div class="pv"><input type="number" id="${id}n" inputmode="decimal" step="${p.step}" min="${p.min}" max="${p.max}" value="${c.params[p.k]}" aria-label="${p.label}"><span>${p.unit}</span></div><input type="range" id="${id}" min="${p.min}" max="${p.max}" step="${p.step}" value="${c.params[p.k]}">`;
+      const r=row.querySelector('input[type=range]'),n=row.querySelector('input[type=number]');
+      r.addEventListener('input',()=>{setParam(c,p,+r.value);n.value=c.params[p.k];});
+      n.addEventListener('change',()=>{setParam(c,p,parseFloat(String(n.value).replace(',','.')));n.value=c.params[p.k];r.value=c.params[p.k];});}
+    else{const opts=typeof p.opts==='function'?p.opts(c):p.opts;row.innerHTML=`<label for="${id}">${p.label}</label><select class="btn" id="${id}">${opts.map(([v,l])=>`<option value="${esc(v)}"${String(c.params[p.k])===String(v)?' selected':''}>${esc(l)}</option>`).join('')}</select>`;
+      row.querySelector('select').addEventListener('change',ev=>{c.params[p.k]=ev.target.value;if(p.k==='auto')c.st.last='';c.st.I=0;if(p.k==='ctl'||p.k==='cyl'){dirty=true;save();openComp(c);return;}if(p.k==='mode'){c.st.pos=1;renderActs(c);}dirty=true;save();});}
+    pb.appendChild(row);}
+  if(c.type==='regulator'&&c.params.ctl==='auto')pb.querySelectorAll(`#p${c.id}-set,#p${c.id}-setn`).forEach(i=>i.disabled=true);
+  if(c.type==='regulator'&&c.params.ctl!=='auto')pb.querySelectorAll(`#p${c.id}-cyl,#p${c.id}-target,#p${c.id}-targetn`).forEach(i=>i.closest('.prm').hidden=true);
+  sheet.querySelector('#rotBtn').onclick=()=>{c.rot=(c.rot+1)&3;dirty=true;save();};
+  const db=sheet.querySelector('#delBtn');let armT=0;db.onclick=()=>{if(db.classList.contains('arm')){clearTimeout(armT);delComp(c);}else{db.classList.add('arm');db.textContent='Tryck igen för att ta bort';armT=setTimeout(()=>{db.classList.remove('arm');db.textContent='Ta bort';},2500);}};
+  renderActs(c);sheet.hidden=false;updateRO();keepVisible(c.x,c.y);}
+function renderActs(c){const box=sheet.querySelector('#actBox');if(!box)return;box.innerHTML='';const tt=T[c.type];
+  if(isCyl(c)){box.hidden=false;const b=document.createElement('button');b.className='btn';b.type='button';b.textContent='Knuffa lasten';b.onclick=()=>{c.st.v-=Math.min(1,0.3+c.params.stroke/1000);};box.appendChild(b);return;}
+  if(tt.toggle){box.hidden=false;const b=document.createElement('button');b.className='btn';b.type='button';b.dataset.tg='1';b.textContent=tt.toggleLabel(c);b.onclick=()=>{actRelease(c,'L');b.textContent=tt.toggleLabel(c);};box.appendChild(b);return;}if(!isValve(c)){box.hidden=true;return;}box.hidden=false;
+  const sides=c.type==='v53'?[['L','◂ Vänster'],['R','Höger ▸']]:[['L',c.params.mode==='hold'?'Håll inne':'Växla läge']];
+  for(const[side,label]of sides){const b=document.createElement('button');b.className='btn';b.type='button';b.textContent=label;b.dataset.side=side;
+    if(c.params.mode==='hold'){b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch(_){}actPress(c,side);});
+      b.addEventListener('pointerup',()=>actRelease(c,side));b.addEventListener('pointercancel',()=>actCancel(c));b.addEventListener('contextmenu',e=>e.preventDefault());
+      b.addEventListener('keydown',e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();actPress(c,side);}});b.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter')actRelease(c,side);});}
+    else b.addEventListener('click',()=>actRelease(c,side));
+    box.appendChild(b);}}
+function setParam(c,p,v){if(!isFinite(v))return;v=clamp(Math.round(v/p.step)*p.step,p.min,p.max);v=+v.toFixed(4);c.params[p.k]=v;
+  if(isCyl(c)&&(p.k==='bore'||p.k==='rod')&&c.params.rod>=c.params.bore-1){if(p.k==='bore'){c.params.rod=Math.max(3,Math.round(c.params.bore*0.4));const r=sheet.querySelector(`#p${c.id}-rod`),n=sheet.querySelector(`#p${c.id}-rodn`);if(r)r.value=c.params.rod;if(n)n.value=c.params.rod;}else c.params.rod=c.params.bore-2;}
+  dirty=true;save();}
+function openHose(h){palette.hidden=true;examples.hidden=true;roComp=null;sheet.className='sheet band';const ca=byId(h.a.c),cb=byId(h.b.c);
+  sheet.innerHTML=head('Slang',`${esc(ca.label)}.${esc(h.a.p)} → ${esc(cb.label)}.${esc(h.b.p)}`,'')+`<dl class="ro" id="ro"></dl><div class="foot"><button class="btn danger" id="delH" type="button">Ta bort slang</button></div>`;
+  wireHead(sheet,()=>openHose(h));sheet.querySelector('#delH').onclick=()=>{hoses=hoses.filter(k=>k!==h);dirty=true;save();select(null);};
+  sheet.hidden=false;updateRO();}
+function updateRO(){const ro=sheet.hidden?null:sheet.querySelector('#ro');if(ro&&selS){let rows=[];
+    if(selS.t==='c'){const c=byId(selS.id);if(!c)return;rows=T[c.type].info?T[c.type].info(c):[];
+      const ab=sheet.querySelectorAll('#actBox .btn');if(c.type==='regulator'&&c._cyl){const v=+(c.st.set||0).toFixed(2);const rr=sheet.querySelector(`#p${c.id}-set`),nn=sheet.querySelector(`#p${c.id}-setn`);if(rr)rr.value=v;if(nn)nn.value=v;}
+      ab.forEach(b=>{if(b.dataset.tg){b.textContent=T[c.type].toggleLabel(c);return;}const s=b.dataset.side;b.classList.toggle('on',c.st.pos===(s==='R'?2:0));});}
+    else{const h=hoses.find(k=>k.id===selS.id);if(!h)return;rows=[['Tryck',f2(pg(byId(h.a.c),h.a.p))+' bar'],['Längd ca',f1(hoseLen(h))+' m'],['Innerdiameter','6 mm']];}
+    ro.innerHTML=rows.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');}
+  updateLegend();$('#clock').textContent='t = '+simT.toFixed(2).replace('.',',')+' s'+(running?'':' · pausad');}
+
+/* palett */
+function drawIcon(cnv,type){const r=2;cnv.width=84*r;cnv.height=56*r;const x=cnv.getContext('2d');x.setTransform(r,0,0,r,0,0);
+  const fake={type,params:{...T[type].def},pn:{},rot:0,st:null};initSt(fake);if(isCyl(fake))fake._g=geo(fake);
+  let[x0,y0,x1,y1]=T[type].box;if(isCyl(fake))x1+=60;if(isValve(fake)){x0=type==='v53'?-120:-112;x1=type==='v53'?120:96;y0=-38;y1=38;}
+  const s=Math.min(76/(x1-x0),48/(y1-y0),1.3);x.translate(42-(x0+x1)/2*s,28-(y0+y1)/2*s);x.scale(s,s);x.lineWidth=2;x.strokeStyle=C.ink;x.lineJoin='round';T[type].draw(x,fake);
+  for(const p of T[type].ports){if(p.exh)continue;x.beginPath();x.arc(p.x,p.y,3,0,7);x.fillStyle=C.muted;x.fill();}}
+function openPalette(){if(!palette.hidden){closeAll(true);return;}closeAll();select(null,true);
+  palette.innerHTML=head('Lägg till','Komponent','')+CATS.map(([cat,types])=>`<h3>${cat}</h3><div class="pal-grid">${types.map(t=>`<button class="pal-item" type="button" data-t="${t}"><canvas aria-hidden="true"></canvas>${T[t].name}</button>`).join('')}</div>`).join('');
+  palette.querySelectorAll('.pal-item').forEach(b=>{drawIcon(b.querySelector('canvas'),b.dataset.t);b.onclick=()=>{closeAll();addComp(b.dataset.t);};});
+  palette.querySelector('[data-close]').onclick=()=>closeAll();const m=palette.querySelector('[data-min]');m.remove();
+  palette.hidden=false;$('#addBtn').setAttribute('aria-pressed','true');}
+function openExamples(){if(!examples.hidden){closeAll(true);return;}closeAll();select(null,true);
+  examples.innerHTML=head('Kom igång','Exempel','')+`<div class="ex-list">${EX.map((e,i)=>`<button class="ex" type="button" data-i="${i}"><b>${e.name}</b><span>${e.desc}</span></button>`).join('')}
+    <button class="ex" type="button" id="clearAll"><b>Tom arbetsyta</b><span>Börja om från ett tomt schema.</span></button></div>
+    <h3>Så gör du</h3><ul class="help">
+    <li>Lägg till delar med <b>Komponent</b>. Dra en del för att flytta den, tryck på den för inställningar.</li>
+    <li>Tryck på en port (pricken) och sedan på en annan för att dra en slang. Du kan också dra direkt från port till port. Flera slangar får gå från samma port, eller använd en T-koppling eller korskoppling.</li>
+    <li>Snabbkopplingar och kulventiler öppnas och stängs med den runda knappen bredvid symbolen.</li>
+    <li>En säkerhetszon styr kulventiler (stänger) och säkerhetsventiler (tömmer) som du kopplar till den i deras inställningar.</li>
+    <li>Tryck på den runda knappen på en ventil för att manövrera den. Fjäderåtergång betyder att du håller inne.</li>
+    <li>Lediga avloppsportar (R och S) blåser ut i det fria. Andra lediga portar är pluggade.</li>
+    <li>Tryck anges som övertryck i bar. Slangarna blir blåare ju högre tryck de har.</li>
+    <li>Nyp för att zooma och dra i en tom yta för att flytta vyn. Kör i ¼× eller 0,1× för att se förloppet i slow motion.</li></ul>`;
+  examples.querySelectorAll('.ex[data-i]').forEach(b=>b.onclick=()=>{closeAll();loadExample(EX[+b.dataset.i]);});
+  const ca=examples.querySelector('#clearAll');let armT=0;ca.onclick=()=>{if(ca.dataset.arm){clearTimeout(armT);closeAll();loadExample(null);}else{ca.dataset.arm='1';ca.querySelector('b').textContent='Tryck igen för att rensa allt';armT=setTimeout(()=>{delete ca.dataset.arm;ca.querySelector('b').textContent='Tom arbetsyta';},2500);}};
+  examples.querySelector('[data-close]').onclick=()=>closeAll();examples.querySelector('[data-min]').remove();
+  examples.hidden=false;$('#exBtn').setAttribute('aria-pressed','true');}
+
+/* ---------- kontroller ---------- */
+const playBtn=$('#play');
+function drawPlay(){playBtn.innerHTML=running?'<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="5" height="16"/><rect x="14" y="4" width="5" height="16"/></svg>Paus':'<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>Kör';
+  playBtn.classList.toggle('run',running);playBtn.setAttribute('aria-label',running?'Pausa simuleringen':'Starta simuleringen');}
+function togglePlay(){running=!running;drawPlay();}
+playBtn.onclick=togglePlay;
+$('#reset').onclick=()=>{resetSim();flash('Tryck och lägen nollställda');};
+$('#speed').onchange=e=>{speed=+e.target.value;};
+$('#addBtn').onclick=()=>{cancelConnect();openPalette();};
+$('#exBtn').onclick=()=>{cancelConnect();openExamples();};
+$('#fitBtn').onclick=()=>fit();
+$('#graphBtn').onclick=()=>{graphOpen=!graphOpen;$('#graph').hidden=!graphOpen;$('#graphBtn').setAttribute('aria-pressed',String(graphOpen));updateLegend();};
+drawPlay();
+
+/* ---------- loop ---------- */
+let last=performance.now(),roT=0;
+function frame(now){
+  const dtr=Math.min(0.05,Math.max(0,(now-last)/1000));last=now;tw+=dtr;
+  if(dirty)build();
+  if(running&&nets.length+comps.length){const sd=dtr*speed;const n=Math.min(600,Math.max(1,Math.ceil(sd/1e-4)));const h=sd/n;for(let i=0;i<n;i++)step(h);}
+  else for(let i=0;i<nets.length;i++){Vn[i]=netVol(i);Pn[i]=nets[i].n/Vn[i];}
+  for(let i=0;i<nets.length;i++){const p=Pn[i]-1;for(const k of nets[i].keys)portPg.set(k,p);}
+  const kq=Math.min(1,dtr*8),ka=Math.min(1,dtr*18);
+  for(const c of comps){const st=c.st;st.qs+=((running?st.q:0)-st.qs)*kq;if(st.anim!==undefined)st.anim+=(st.pos-st.anim)*ka;for(const k in st.ex)st.exs[k]=(st.exs[k]||0)+((running?st.ex[k]:0)-(st.exs[k]||0))*kq;}
+  if(viewTarget){view.ox+=(viewTarget.ox-view.ox)*Math.min(1,dtr*10);view.oy+=(viewTarget.oy-view.oy)*Math.min(1,dtr*10);if(Math.abs(viewTarget.oy-view.oy)<0.5&&Math.abs(viewTarget.ox-view.ox)<0.5)viewTarget=null;}
+  if(running)sampleGraph();
+  if(W)render();
+  if(graphOpen)drawGraph();
+  if(now-roT>150){roT=now;updateRO();}
+  requestAnimationFrame(frame);
+}
+if(!load())loadExample(EX[0]);else{dirty=true;}
+resize();fit();
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
