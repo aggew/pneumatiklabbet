@@ -591,7 +591,7 @@ function restore(sn){const d=JSON.parse(sn);const old=new Map(comps.map(c=>[c.id
 function undo(){if(hidx>0){hidx--;restore(hist[hidx]);flash('Ångrat');}}
 function redo(){if(hidx<hist.length-1){hidx++;restore(hist[hidx]);flash('Gjort om');}}
 function save(noRec){if(!noRec)recPending=true;clearTimeout(saveT);saveT=setTimeout(()=>{if(recPending){recPending=false;record();}try{localStorage.setItem(KEY,snapshot());}catch(_){}},400);}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s||s.v!==1||!Array.isArray(s.comps))return false;
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s||s.v!==1||!Array.isArray(s.comps))return false;if(s.comps.some(c=>c.type==='wall')){try{localStorage.removeItem(KEY);}catch(_){}return false;}
   comps=s.comps.filter(c=>T[c.type]).map(c=>{const k={...c,params:{...T[c.type].def,...c.params}};initSt(k);return k;});hoses=(s.hoses||[]).filter(h=>h&&h.a&&h.b);nextId=s.nextId||1;
   for(const c of comps)nextId=Math.max(nextId,c.id+1);for(const h of hoses)nextId=Math.max(nextId,h.id+1);reindex();return true;}catch(_){return false;}}
 
